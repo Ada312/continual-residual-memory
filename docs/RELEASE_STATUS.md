@@ -62,12 +62,24 @@ have been rerun in this checkout.
    Its loss, counterfactual terms, gradients and one AdamW update were checked
    against the pre-cleanup implementation on the same fixed-seed batch.
 
-Under the stated assumption that upstream redistribution and checkpoint
-permissions are resolved, this checkout is suitable for public code release.
-The core inference API, paper-facing training/evaluation entries, frozen result
-artifacts, and aggregation/statistics paths are present and internally checked.
+The CRM core and all non-FlowSE reproduction paths are suitable for public code
+release under the stated third-party terms. The core inference API,
+paper-facing training/evaluation entries, frozen result artifacts, and
+aggregation/statistics paths are present and internally checked.
 The historical Stage 2 snapshot limitation above remains a reproducibility
 qualification: the released recipe is executable and its active computation is
 validated, but byte-identical regeneration of the provided checkpoint is not
 claimed. The manuscript correctly distinguishes training readout from
 deployment readout.
+
+## Current publication blocker
+
+The frozen cross-backbone adapter and result labeled `FlowSE` use the
+`seongq/flowmse` STFT-domain reverse-ODE implementation. The paper citation
+specified for release is the distinct Wang et al. mel/DiT/vocoder system at
+`Honee-W/FlowSE`. The existing numerical row cannot be attributed to Wang et
+al. without a new compatible adapter, independently trained CRM pair, and DNS
+evaluation, or alternatively a correction of the paper citation to the model
+that was actually evaluated. Until one of those actions is completed, public
+release of the five-backbone claim is not ready. This qualification supersedes
+the general suitability statement above for that claim only.

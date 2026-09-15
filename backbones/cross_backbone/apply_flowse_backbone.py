@@ -20,7 +20,10 @@ if str(FLOWSE_ROOT) not in sys.path:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Apply the official ICASSP 2025 FlowSE checkpoint."
+        description=(
+            "Apply the legacy frozen seongq/flowmse checkpoint; this is not "
+            "the Wang et al. Interspeech 2025 FlowSE implementation."
+        )
     )
     parser.add_argument("--noisy-dir", type=Path, required=True)
     parser.add_argument("--checkpoint", type=Path, required=True)

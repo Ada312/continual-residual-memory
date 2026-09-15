@@ -112,10 +112,11 @@ SOFTWARE.
 
 ## WavLM EARS map
 
-`checkpoints/baselines/WavLM_EARS_map.th` is byte-identical to the file in the
-pinned SETTA repository. It is currently retained only for exact LaDen
-baseline reproduction. It is a candidate for external download rather than
-repository redistribution; see `docs/THIRD_PARTY_AUDIT.md`.
+The LaDen EARS foundation map is not redistributed. It is downloaded from the
+pinned SETTA repository into `checkpoints/baselines/WavLM_EARS_map.th` and
+verified against SHA256
+`3f2102adb72c406cd34ad212d76b19db56e53bec2658b1bfb861fda1a1708963`.
+See `checkpoints/baselines/README.md`.
 
 ## Dataset-derived metadata
 
@@ -130,6 +131,11 @@ produced by this project, not redistributed source audio.
 
 StoRM, FlowSE, GTCRN, FastEnhancer-B, and UL-UNAS implementations and Source
 weights are not present. Only local invocation adapters and independently
-trained CRM recovery/refinement weights are tracked. FlowSE commit
-`f6b479d13fecc6cb6f12394f46dfc6799fb479b6` contains no license file or license
-statement; no redistribution permission is inferred.
+trained CRM recovery/refinement weights are tracked. The intended FlowSE is
+Wang et al., "FlowSE: Efficient and High-Quality Speech Enhancement via Flow
+Matching" (`https://github.com/Honee-W/FlowSE`). Inspected revision
+`cfb81f171d804689bf7607afd0d12a6ee89de547` contains no license file or license
+statement; no redistribution permission is inferred. The current frozen
+adapter imports the distinct `seongq/flowmse` implementation and therefore
+cannot be represented as the Wang et al. integration; see
+`docs/CROSS_BACKBONE.md`.

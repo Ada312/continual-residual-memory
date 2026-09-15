@@ -12,6 +12,7 @@ data/*/
 !data/*.py
 !data/*.md
 checkpoints/external/
+checkpoints/baselines/*.th
 cache/
 logs/
 wandb/

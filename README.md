@@ -59,14 +59,37 @@ Training uses **only EARS-WHAM** (8,192 training and 632 speaker-disjoint held-o
 | --- | --- | --- | --- |
 | CMGAN | [Official repository](https://github.com/ruizhecao96/CMGAN) | Main frozen enhancement backbone | [Cao et al., 2022](https://doi.org/10.21437/Interspeech.2022-517) |
 | StoRM | [Official repository](https://github.com/sp-uhh/storm) | StoRM-50 cross-backbone evaluation | [Lemercier et al., 2023](https://doi.org/10.1109/TASLP.2023.3294692) |
-| FlowSE | [Official repository](https://github.com/seongq/flowmse) | Flow-matching cross-backbone evaluation | [Lee et al., 2025](https://doi.org/10.1109/ICASSP49660.2025.10888274) |
+| FlowSE | [Official repository](https://github.com/Honee-W/FlowSE) | Intended flow-matching cross-backbone | [Wang et al., 2025](https://doi.org/10.21437/Interspeech.2025-1745) |
 | GTCRN | [Official repository](https://github.com/Xiaobin-Rong/gtcrn) | Discriminative cross-backbone evaluation | [Rong et al., 2024](https://ieeexplore.ieee.org/document/10448310) |
 | FastEnhancer-B | [Official repository](https://github.com/aask1357/fastenhancer) | Streaming cross-backbone evaluation | [Ahn et al., 2026](https://arxiv.org/abs/2509.21867) |
 | UL-UNAS | [Official repository](https://github.com/Xiaobin-Rong/ul-unas) | Ultra-lightweight cross-backbone evaluation | [Rong et al., 2026](https://doi.org/10.1109/TASLPRO.2026.3661271) |
 | SETTA / LaDen / MPol | [Official repository](https://github.com/tobiaaa/SETTA) | Gradient-based TTA baselines | [LaDen](https://arxiv.org/abs/2509.04280), [MPol](https://arxiv.org/abs/2601.14770) |
 | WavLM Large | [Official model](https://huggingface.co/microsoft/wavlm-large) | Frozen LaDen embedding encoder | [Chen et al., 2022](https://arxiv.org/abs/2110.13900) |
 
-CMGAN is the main frozen backbone. Five independently trained CRM pairs are provided for StoRM-50, GTCRN, FastEnhancer-B, FlowSE, and UL-UNAS. Small self-trained CRM checkpoints are included; obtain CMGAN and the other upstream checkpoint files separately and check their hashes in [`docs/CHECKPOINTS.md`](docs/CHECKPOINTS.md). Upstream repository commits and exact inference options are in [`docs/CROSS_BACKBONE.md`](docs/CROSS_BACKBONE.md).
+CMGAN is the main frozen backbone. Five frozen CRM checkpoint pairs are
+provided for the recorded cross-backbone artifacts; the identity mismatch for
+the pair labeled FlowSE must be resolved before it is attributed to Wang et
+al. Small self-trained CRM checkpoints are included; obtain CMGAN and the
+other upstream checkpoint files separately and check their hashes in
+[`docs/CHECKPOINTS.md`](docs/CHECKPOINTS.md). Upstream repository commits and
+exact inference options are in
+[`docs/CROSS_BACKBONE.md`](docs/CROSS_BACKBONE.md).
+
+LaDen's third-party EARS foundation map is also external. Download and verify
+it from SETTA commit `08ea624f` into
+`checkpoints/baselines/WavLM_EARS_map.th` using
+[`checkpoints/baselines/README.md`](checkpoints/baselines/README.md); the
+expected SHA256 is
+`3f2102adb72c406cd34ad212d76b19db56e53bec2658b1bfb861fda1a1708963`.
+The intended FlowSE dependency is Wang et al.'s `Honee-W/FlowSE`, inspected at
+commit `cfb81f171d804689bf7607afd0d12a6ee89de547`; its official checkpoint is
+published at
+[`flowse/wenetspeech4tts_Premium.pt.tar`](https://huggingface.co/flowse/wenetspeech4tts_Premium.pt.tar/tree/df1bd3f8249a51f78d2b79bb037c9bdbcf660640).
+That upstream revision declares no software license, so neither its code nor
+checkpoint is redistributed here. A mismatch between this identity and the
+currently frozen FlowSE adapter is recorded in
+[`docs/CROSS_BACKBONE.md`](docs/CROSS_BACKBONE.md); do not attribute the
+existing frozen FlowSE row to Wang et al. until that issue is resolved.
 
 ## Training
 
@@ -110,4 +133,13 @@ Venue and DOI fields should be added after publication metadata is finalized.
 
 ## License and Provenance
 
-See [LICENSE](LICENSE), [`THIRD_PARTY.md`](THIRD_PARTY.md), [`docs/IMPLEMENTATION_PROVENANCE.md`](docs/IMPLEMENTATION_PROVENANCE.md), and the [release verification status](docs/RELEASE_STATUS.md). The repository contains no original `.git` history, benchmark audio, full waveform outputs, large upstream weights, training caches, or private audit dumps.
+See [LICENSE](LICENSE), [`THIRD_PARTY.md`](THIRD_PARTY.md),
+[`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md),
+[`docs/IMPLEMENTATION_PROVENANCE.md`](docs/IMPLEMENTATION_PROVENANCE.md), and
+the [release verification status](docs/RELEASE_STATUS.md). `LICENSE` applies
+to project code and the identified GPL-compatible derivatives; retained
+EARS-WHAM selection metadata remains under the upstream CC BY-NC 4.0 terms
+documented in [`manifests/training/README.md`](manifests/training/README.md).
+The repository contains no original `.git` history, benchmark audio, full
+waveform outputs, large upstream weights, training caches, or private audit
+dumps.

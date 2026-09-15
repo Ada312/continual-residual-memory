@@ -16,7 +16,7 @@ are inventoried in `THIRD_PARTY_NOTICES.md` and `docs/THIRD_PARTY_AUDIT.md`.
 | StoRM | `https://github.com/sp-uhh/storm.git`, `257e9636a7251ca40aa200753d5c0fe918e31879` | MIT | Frozen cross-backbone Source |
 | GTCRN | `https://github.com/Xiaobin-Rong/gtcrn.git`, `502ebfab64da7c4a9af78dcb9c6ceef1ebb01c73` | MIT | Frozen cross-backbone Source |
 | FastEnhancer | `https://github.com/aask1357/fastenhancer.git`, `f85223bd546b27f39dc0744e0310dcd246f750a4` | MIT | FastEnhancer-B frozen Source |
-| FlowSE runtime | `https://github.com/seongq/flowmse.git`, `f6b479d13fecc6cb6f12394f46dfc6799fb479b6` | **No license declared at this revision** | Frozen cross-backbone Source; do not redistribute upstream code/weights without permission |
+| FlowSE (Wang et al.) | `https://github.com/Honee-W/FlowSE.git`, inspected revision `cfb81f171d804689bf7607afd0d12a6ee89de547`; checkpoint repository revision `df1bd3f8249a51f78d2b79bb037c9bdbcf660640` | **Source repository has no license declaration; checkpoint model card says Apache-2.0** | Intended FlowSE cross-backbone Source; both remain external; current frozen adapter mismatch is documented in `docs/CROSS_BACKBONE.md` |
 | UL-UNAS | `https://github.com/Xiaobin-Rong/ul-unas.git`, `00f7c700da43d38347f30a6ccebd86fcbc798e07` | MIT | Frozen cross-backbone Source |
 
 The files under `backbones/cross_backbone/` are local adapters that import
@@ -36,6 +36,8 @@ implementations or weights.
 
 No waveform from these datasets is tracked. Portable manifests contain only
 experiment identities/order and are addressed separately in the notices.
+The EARS-WHAM selection files under `manifests/training/` remain subject to
+the upstream CC BY-NC 4.0 terms, not the project-code GPL-3.0 license.
 
 ## Python Packages
 
