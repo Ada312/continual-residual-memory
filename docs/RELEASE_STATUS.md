@@ -38,6 +38,15 @@ have been rerun in this checkout.
 - Training and cross-backbone orchestration CLIs parse. Formal full-dataset
   training, cross-backbone inference, third-party baseline evaluation and
   profiler runs were **not** executed for this release-only verification.
+- A clean-room check on 2026-09-15 used a fresh clone and a newly created
+  Python 3.9 environment. The included recovery/refinement checkpoints ran an
+  ordered three-utterance synthetic stream, preserved exact first-utterance
+  no-memory equality, wrote and reloaded prototype state, and completed the
+  common seven-metric WAV-to-CSV pipeline. A six-train/two-held-out synthetic
+  Stage 2 smoke run built grouped causal contexts, completed one optimization
+  epoch, saved a new checkpoint, and used that checkpoint for causal inference.
+  This validates executable plumbing only; it is not a substitute for the
+  formal 8,192/632 EARS-WHAM training experiment.
 
 ## Publication qualifications
 
