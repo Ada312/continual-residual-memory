@@ -255,8 +255,6 @@ def lpcoeff(speech_frame, model_order):
             sum_term = np.sum(a_past * np.array(R[i:0:-1]))
         # rcoeff[i] = (R[i+1] - sum_term)/E[i] # fixed by LiHongfeng
         rcoeff[i] = (R[i+1] - sum_term)/max(E[i], eps)
-        # if E[i] == 0:
-        #   print(233333, i, eps==0)
         a[i] = rcoeff[i]
         if i > 0:
             a[:i] = a_past[:i] - rcoeff[i] * a_past[::-1]
