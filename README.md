@@ -31,11 +31,40 @@ Install [baseline](requirements-baselines.txt) and [cross-backbone](requirements
 For repository checks, install `requirements-dev.txt`, then run
 `ruff check .` and `python -m pytest -q tests`.
 
-## Data Preparation
+## External Resources
+
+Third-party resources are not redistributed in this repository unless a
+specific vendored compatibility component is identified in
+[`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md). Download datasets,
+upstream source trees, and backbone weights from their official providers and
+follow their respective licenses and terms of use. Repository paths and pinned
+versions are documented in [`THIRD_PARTY.md`](THIRD_PARTY.md).
+
+## Datasets
+
+| Resource | Official source | Use in this paper | Citation |
+| --- | --- | --- | --- |
+| EARS / EARS-WHAM | [EARS](https://github.com/facebookresearch/ears_dataset), [EARS-WHAM generator](https://github.com/sp-uhh/ears_benchmark) | Only offline CRM training source | [Richter et al., 2024](https://arxiv.org/abs/2406.06185) |
+| WHAM! | [Official site](http://wham.whisper.ai/) | Noise for EARS-WHAM | [Wichern et al., 2019](https://doi.org/10.1109/ICASSP.2019.8683555) |
+| DNS Challenge | [Official repository](https://github.com/microsoft/DNS-Challenge) | DNS 2020 synthetic no-reverb evaluation | [Reddy et al., 2020](https://doi.org/10.21437/Interspeech.2020-1768) |
+| DEMAND | [Official Zenodo record](https://doi.org/10.5281/zenodo.1227121) | Noise used to construct EARS-D | [Thiemann et al., 2013](https://doi.org/10.1121/1.4799597) |
+| LibriSpeech | [OpenSLR 12](https://www.openslr.org/12) | Clean speech for Libri-MUSAN evaluation mixtures | [Panayotov et al., 2015](https://doi.org/10.1109/ICASSP.2015.7178964) |
+| MUSAN | [OpenSLR 17](https://www.openslr.org/17) | Music noise and old-domain memory stream | [Snyder et al., 2015](https://arxiv.org/abs/1510.08484) |
 
 Training uses **only EARS-WHAM** (8,192 training and 632 speaker-disjoint held-out mixtures). The paper evaluates three separate empty-memory-start streams: DNS 2020 synthetic no-reverb (150), EARS-D (886), and Libri-MUSAN music (2,620). Dataset acquisition and preparation scripts are in [`data/`](data/) and [`docs/DATA.md`](docs/DATA.md). `manifests/` contains portable frozen identities and order; it contains no audio. Clean references are used for source-domain offline training and final evaluation, never for target-domain memory updates.
 
-## Pretrained Backbones and Checkpoints
+## Pretrained Backbones
+
+| Resource | Official source | Use in this paper | Citation |
+| --- | --- | --- | --- |
+| CMGAN | [Official repository](https://github.com/ruizhecao96/CMGAN) | Main frozen enhancement backbone | [Cao et al., 2022](https://doi.org/10.21437/Interspeech.2022-517) |
+| StoRM | [Official repository](https://github.com/sp-uhh/storm) | StoRM-50 cross-backbone evaluation | [Lemercier et al., 2023](https://doi.org/10.1109/TASLP.2023.3294692) |
+| FlowSE | [Official repository](https://github.com/seongq/flowmse) | Flow-matching cross-backbone evaluation | [Lee et al., 2025](https://doi.org/10.1109/ICASSP49660.2025.10888274) |
+| GTCRN | [Official repository](https://github.com/Xiaobin-Rong/gtcrn) | Discriminative cross-backbone evaluation | [Rong et al., 2024](https://ieeexplore.ieee.org/document/10448310) |
+| FastEnhancer-B | [Official repository](https://github.com/aask1357/fastenhancer) | Streaming cross-backbone evaluation | [Ahn et al., 2026](https://arxiv.org/abs/2509.21867) |
+| UL-UNAS | [Official repository](https://github.com/Xiaobin-Rong/ul-unas) | Ultra-lightweight cross-backbone evaluation | [Rong et al., 2026](https://doi.org/10.1109/TASLPRO.2026.3661271) |
+| SETTA / LaDen / MPol | [Official repository](https://github.com/tobiaaa/SETTA) | Gradient-based TTA baselines | [LaDen](https://arxiv.org/abs/2509.04280), [MPol](https://arxiv.org/abs/2601.14770) |
+| WavLM Large | [Official model](https://huggingface.co/microsoft/wavlm-large) | Frozen LaDen embedding encoder | [Chen et al., 2022](https://arxiv.org/abs/2110.13900) |
 
 CMGAN is the main frozen backbone. Five independently trained CRM pairs are provided for StoRM-50, GTCRN, FastEnhancer-B, FlowSE, and UL-UNAS. Small self-trained CRM checkpoints are included; obtain CMGAN and the other upstream checkpoint files separately and check their hashes in [`docs/CHECKPOINTS.md`](docs/CHECKPOINTS.md). Upstream repository commits and exact inference options are in [`docs/CROSS_BACKBONE.md`](docs/CROSS_BACKBONE.md).
 
