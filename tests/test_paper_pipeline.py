@@ -102,6 +102,33 @@ def test_refinement_training_parameter_selection():
     model.load_state_dict(torch.load(ROOT / "checkpoints/crm/dynamic_best.th", weights_only=True))
 
 
+def test_refinement_context_builder_uses_public_memory_interface(monkeypatch):
+    from crm._training import refinement
+
+    metadata = pd.DataFrame(
+        {
+            "filename": ["p001_a.wav", "p001_b.wav"],
+            "noise": ["wham_loc1_a.wav", "wham_loc1_b.wav"],
+        }
+    )
+    waveform = torch.linspace(-0.1, 0.1, 4096)
+    monkeypatch.setattr(refinement, "load_mono", lambda _: waveform)
+    contexts = refinement.build_contexts(
+        Path("noisy"),
+        Path("source"),
+        metadata,
+        metadata["filename"].tolist(),
+        noise_frame_fraction=0.3,
+        memory_warmup=20,
+        memory_prototypes=2,
+        novelty_threshold=0.35,
+        description="test memory",
+    )
+    assert set(contexts) == set(metadata["filename"])
+    assert contexts["p001_a.wav"]["count"].sum() == 0
+    assert contexts["p001_b.wav"]["count"].sum() == 1
+
+
 def test_memory_roundtrip_and_checkpoint_guard(tmp_path):
     torch.set_num_threads(1)
     checkpoint = ROOT / "checkpoints/crm/dynamic_best.th"

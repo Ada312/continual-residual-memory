@@ -163,7 +163,7 @@ def build_contexts(
         memory = CausalPrototypeResidualNoiseMemory(
             prototypes=memory_prototypes,
             noise_frame_fraction=noise_frame_fraction,
-            memory_warmup=memory_warmup,
+            warmup_utterances=memory_warmup,
             novelty_threshold=novelty_threshold,
         )
         for filename in stream_files:
