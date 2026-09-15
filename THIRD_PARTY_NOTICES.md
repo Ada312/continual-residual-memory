@@ -131,11 +131,9 @@ produced by this project, not redistributed source audio.
 
 StoRM, FlowSE, GTCRN, FastEnhancer-B, and UL-UNAS implementations and Source
 weights are not present. Only local invocation adapters and independently
-trained CRM recovery/refinement weights are tracked. The intended FlowSE is
-Wang et al., "FlowSE: Efficient and High-Quality Speech Enhancement via Flow
-Matching" (`https://github.com/Honee-W/FlowSE`). Inspected revision
-`cfb81f171d804689bf7607afd0d12a6ee89de547` contains no license file or license
-statement; no redistribution permission is inferred. The current frozen
-adapter imports the distinct `seongq/flowmse` implementation and therefore
-cannot be represented as the Wang et al. integration; see
-`docs/CROSS_BACKBONE.md`.
+trained CRM recovery/refinement weights are tracked. The FlowSE experiment
+uses Lee et al., "FlowSE: Flow Matching-based Speech Enhancement"
+(`https://github.com/seongq/flowmse`) at commit
+`f6b479d13fecc6cb6f12394f46dfc6799fb479b6`. That pinned revision contains no
+license file or license statement, so no redistribution permission is
+inferred; its source and checkpoint remain external.

@@ -42,13 +42,12 @@ recovery/refinement modules.
    redistribution terms are satisfied.
 4. Record copyright, license, upstream identity, and modifications for every
    retained vendored component.
-5. Do not redistribute Wang et al. FlowSE source or weights unless its authors
+5. Do not redistribute Lee et al. FlowSE source or weights unless its authors
    provide an explicit license or separate permission.
 
-## Pending maintainer decisions
-
-1. Resolve the FlowSE identity mismatch documented in `CROSS_BACKBONE.md`.
+## Maintainer decisions
 
 Resolved decisions: the WavLM EARS map is external; the tested embedded CMGAN
 compatibility implementation remains with full notices; EARS-WHAM selection
-metadata remains with explicit CC BY-NC 4.0 scope.
+metadata remains with explicit CC BY-NC 4.0 scope; FlowSE is the actually
+evaluated Lee et al. `seongq/flowmse` implementation and remains external.
