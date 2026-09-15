@@ -1,0 +1,16 @@
+torch==2.8.0
+torchaudio==2.8.0
+numpy==2.0.2
+scipy==1.13.1
+pandas==2.2.2
+soundfile==0.13.1
+pyloudnorm==0.1.1
+pesq==0.0.4
+pystoi==0.4.1
+torch-pesq==0.1.2
+hydra-core==1.3.2
+omegaconf==2.3.0
+matplotlib==3.9.0
+tqdm==4.66.4
+einops==0.8.0
+librosa==0.10.2

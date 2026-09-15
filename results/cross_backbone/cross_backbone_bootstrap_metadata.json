@@ -1,0 +1,67 @@
+{
+  "status": "FROZEN FORMAL ARTIFACT",
+  "sample_unit": "utterance",
+  "dataset": "DNS 2020 synthetic no-reverb",
+  "metric": "PESQ",
+  "comparison": "paired Dynamic - Source",
+  "confidence_interval": "95% percentile bootstrap",
+  "iterations": 20000,
+  "seed": 20260830,
+  "rng": "numpy.random.default_rng; independently reinitialized with the fixed seed for each backbone",
+  "output_csv": "ORIGINAL_REPO/outfiles/cross_backbone_final_frozen_20260830/cross_backbone_bootstrap.csv",
+  "output_csv_sha256": "b2b21f9dc93a620ecb93e4387e781e8525f4400c69bca15eb5db53179d99c86d",
+  "script": "ORIGINAL_REPO/scripts/paired_bootstrap_cross_backbone.py",
+  "script_sha256": "9ab6ccc7b05220799623116d8b2ddbfe8ce0bfe957034e73074ea6ddd45ed2d2",
+  "environment": {
+    "python": "3.9.25",
+    "numpy": "2.0.2",
+    "pandas": "2.2.2"
+  },
+  "inputs": [
+    {
+      "backbone": "StoRM-50",
+      "source_csv": "ORIGINAL_REPO/outfiles/cross_backbone_final_frozen_20260830/storm50/source/metrics/source_per_file_metrics.csv",
+      "source_csv_sha256": "760e5b832dfafd9943a31fb19480191afefabf537dffcc204e5a884b1b5cb0b8",
+      "dynamic_csv": "ORIGINAL_REPO/outfiles/cross_backbone_final_frozen_20260830/storm50/dynamic/metrics/dynamic_per_file_metrics.csv",
+      "dynamic_csv_sha256": "e67e0d52dc7308ed584fd9f175086b3d44ef61df0610d53cff21f5e69b2cfb75",
+      "paired_csv": "ORIGINAL_REPO/outfiles/cross_backbone_final_frozen_20260830/statistics/storm50/paired_inputs.csv",
+      "paired_csv_sha256": "dbf493fa9af19e8fbe256eb2b30824ced86d42d7170fb8bf54404e2ea88e9fa5"
+    },
+    {
+      "backbone": "GTCRN",
+      "source_csv": "ORIGINAL_REPO/outfiles/cross_backbone_final_frozen_20260830/gtcrn/source/metrics/source_per_file_metrics.csv",
+      "source_csv_sha256": "4eeda5eb76c354667011b569d523cad60a62e931787c6f44ddc408140d3534ef",
+      "dynamic_csv": "ORIGINAL_REPO/outfiles/cross_backbone_final_frozen_20260830/gtcrn/dynamic/metrics/dynamic_per_file_metrics.csv",
+      "dynamic_csv_sha256": "339ca4c5be63cca0404111d60282b32a81fb4c3341ee4d14c667b9e975afee24",
+      "paired_csv": "ORIGINAL_REPO/outfiles/cross_backbone_final_frozen_20260830/statistics/gtcrn/paired_inputs.csv",
+      "paired_csv_sha256": "278fb1fe8159904de7509c38ecadc761a2790cc028cc4dc71684034157d4cbb5"
+    },
+    {
+      "backbone": "FastEnhancer-B",
+      "source_csv": "ORIGINAL_REPO/outfiles/cross_backbone_final_frozen_20260830/fastenhancer_b/source/metrics/source_per_file_metrics.csv",
+      "source_csv_sha256": "13e6fac9110bbceb0e3dc1f3ec81765406bada27fb53adf551d8f3cac283c0c8",
+      "dynamic_csv": "ORIGINAL_REPO/outfiles/cross_backbone_final_frozen_20260830/fastenhancer_b/dynamic/metrics/dynamic_per_file_metrics.csv",
+      "dynamic_csv_sha256": "fe2fe68f7f68c2c386524fe778ec9a46affc30487202b819482d663214862e2d",
+      "paired_csv": "ORIGINAL_REPO/outfiles/cross_backbone_final_frozen_20260830/statistics/fastenhancer_b/paired_inputs.csv",
+      "paired_csv_sha256": "ebed92da7ee1dd2e0f18396dbd786cc400337ae9dffea01edd970a0a41d8a0de"
+    },
+    {
+      "backbone": "FlowSE",
+      "source_csv": "ORIGINAL_REPO/outfiles/cross_backbone_final_frozen_20260830/flowse/source/metrics/source_per_file_metrics.csv",
+      "source_csv_sha256": "a66fa297a3e128ad8baf25226a80be1cc2ec7f24c9a4d68732a4e577572f0d23",
+      "dynamic_csv": "ORIGINAL_REPO/outfiles/cross_backbone_final_frozen_20260830/flowse/dynamic/metrics/dynamic_per_file_metrics.csv",
+      "dynamic_csv_sha256": "e4b522ea577ad2f2d6a430dcf5d83d4bb71078ab18a9570ddf40f9d47836ea24",
+      "paired_csv": "ORIGINAL_REPO/outfiles/cross_backbone_final_frozen_20260830/statistics/flowse/paired_inputs.csv",
+      "paired_csv_sha256": "e181e918dff4d891be49e798a86131506e943bdf5043fc7eb242033096a9b5f9"
+    },
+    {
+      "backbone": "UL-UNAS",
+      "source_csv": "ORIGINAL_REPO/outfiles/cross_backbone_final_frozen_20260830/ul_unas/source/metrics/source_per_file_metrics.csv",
+      "source_csv_sha256": "3265e8ccb88fcb36d644eee1511733552aecae450e31d0792f2cbc8a2df8918b",
+      "dynamic_csv": "ORIGINAL_REPO/outfiles/cross_backbone_final_frozen_20260830/ul_unas/dynamic/metrics/dynamic_per_file_metrics.csv",
+      "dynamic_csv_sha256": "ed48f2aad70f8d49ec7b2ca2e56c8f9ef14574449f314565945a9b5632ff2420",
+      "paired_csv": "ORIGINAL_REPO/outfiles/cross_backbone_final_frozen_20260830/statistics/ul_unas/paired_inputs.csv",
+      "paired_csv_sha256": "71b39cbe676a5bfdc23364606dd54b14c22c8167a64395954a054272560d1954"
+    }
+  ]
+}

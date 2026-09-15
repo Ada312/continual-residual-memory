@@ -1,0 +1,21 @@
+{
+  "epochs": 4,
+  "batch_size": 8,
+  "num_workers": 6,
+  "segment_seconds": 2.0,
+  "learning_rate": 0.0003,
+  "weight_decay": 0.0001,
+  "validation_speakers": ["p100", "p101"],
+  "channels": 32,
+  "max_gain": 0.1,
+  "initial_gain": 0.005,
+  "time_loss_weight": 1.0,
+  "complex_loss_weight": 0.35,
+  "logmag_loss_weight": 0.2,
+  "projection_loss_weight": 0.15,
+  "sisdr_loss_weight": 0.01,
+  "segmental_snr_loss_weight": 0.0,
+  "trust_loss_weight": 0.01,
+  "validation_interval": 1,
+  "seed": 1337
+}

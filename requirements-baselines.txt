@@ -1,0 +1,2 @@
+-r requirements-core.txt
+transformers==4.48.3

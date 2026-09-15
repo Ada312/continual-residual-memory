@@ -1,0 +1,11 @@
+[tool.ruff]
+target-version = "py39"
+
+[tool.ruff.lint.per-file-ignores]
+"backbones/cmgan/transforms/__init__.py" = ["F401", "F403"]
+"metrics/_frozen/*.py" = ["F401", "F841"]
+"metrics/evaluate.py" = ["E402"]
+"scripts/count_parameters.py" = ["E402"]
+"scripts/infer_stream.py" = ["E402"]
+"scripts/measure_flops.py" = ["E402"]
+"scripts/measure_rtf.py" = ["E402"]

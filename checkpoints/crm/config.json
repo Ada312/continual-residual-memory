@@ -1,0 +1,13 @@
+{
+  "channels": 32,
+  "max_gain": 0.1,
+  "initial_gain": 0.005,
+  "memory_warmup": 20,
+  "noise_frame_fraction": 0.3,
+  "novelty_threshold": 0.35,
+  "posterior_temperature": 0.5,
+  "reliability_power": 0.0,
+  "posterior_confidence_power": 0.0,
+  "delta_rank": 4,
+  "memory_delta_gain": 0.08
+}

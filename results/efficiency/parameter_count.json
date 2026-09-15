@@ -1,0 +1,8 @@
+{
+  "cmgan_generator": 1834833,
+  "static": 25313,
+  "dynamic_active": 11776,
+  "functional_crm_extra": 37089,
+  "full_dynamic_checkpoint_elements": 39137,
+  "test_time_trainable": 0
+}

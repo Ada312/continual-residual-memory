@@ -1,0 +1,3 @@
+# Install requirements-core.txt first. Each upstream backbone must be installed
+# in its own pinned environment; their dependencies are intentionally not merged.
+# See docs/CROSS_BACKBONE.md for repository commits and per-backbone setup.
