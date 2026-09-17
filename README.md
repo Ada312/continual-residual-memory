@@ -45,6 +45,11 @@ export DATA_ROOT=/path/to/crm-data
 python data/prepare_ears_wham_from_benchmark.py \
   --ears-wham-root /path/to/EARS-WHAM \
   --out-dir "$DATA_ROOT/ears_wham"
+
+python backbones/cmgan/inference.py \
+  --noisy-dir "$DATA_ROOT/ears_wham/noisy" \
+  --output-dir "$DATA_ROOT/ears_wham/source" \
+  --checkpoint checkpoints/external/cmgan_ears.th
 ```
 
 See [`data/README.md`](data/README.md) for dataset sources, target-set construction, expected directory layouts, and fixed manifests.
@@ -53,14 +58,9 @@ See [`data/README.md`](data/README.md) for dataset sources, target-set construct
 
 ### Stage 1: Utterance-Local Residual Recovery
 
-Stage 1 trains the utterance-local residual recovery module while keeping the CMGAN backbone frozen.
+Stage 1 trains an utterance-local residual recovery module on top of the frozen CMGAN backbone.
 
 ```bash
-python backbones/cmgan/inference.py \
-  --noisy-dir "$DATA_ROOT/ears_wham/noisy" \
-  --output-dir "$DATA_ROOT/ears_wham/source" \
-  --checkpoint checkpoints/external/cmgan_ears.th
-
 python scripts/train_recovery.py \
   --config configs/cmgan/recovery_training.json \
   --clean-dir "$DATA_ROOT/ears_wham/clean" \
