@@ -13,10 +13,12 @@ removed or externalized.
 | `backbones/cmgan/`, `backbones/registry.py` | SETTA `08ea624f`, ultimately CMGAN; Conformer also traces to lucidrains | GPL-3.0 derivative plus MIT upstream notices; mix of unchanged and modified files | **Keep as approved** with `THIRD_PARTY_NOTICES.md`; this is the clean-room-tested main-backbone implementation |
 | `metrics/_frozen/` | SETTA `08ea624f`; STOI adapted from pystoi | GPL-3.0 derivative, with MIT pystoi notice | Retain for exact seven-metric reproducibility, with notices and modification disclosure |
 | `patches/setta_final_baselines.patch` | Patch against SETTA `08ea624f` | GPL-3.0 derivative | Retain for exact LaDen/MPol reproduction, with GPL attribution |
+| `checkpoints/external/cmgan_ears.th` | SETTA `08ea624f` tracked CMGAN checkpoint | Upstream repository is GPL-3.0; no checkpoint-specific redistribution statement found | **Externalized**; download from pinned upstream URL and verify SHA256 |
 | `checkpoints/baselines/WavLM_EARS_map.th` | Byte-identical SETTA tracked checkpoint | Third-party binary, 525,503 bytes | **Externalized**; ignored locally and restored from pinned SETTA using documented SHA256 |
 | `checkpoints/crm/**` | Independently trained CRM modules | Project weights; no upstream backbone tensors included | Keep |
 | `manifests/dns.csv`, `ears_d.csv`, `musan_music*.csv` | Project-generated portable identities/orders derived from public datasets | No waveform; essential protocol metadata | Keep with dataset attribution and upstream terms |
 | `manifests/training/metadata.txt`, `subset_manifest.json` | Project-generated EARS-WHAM selection metadata | No waveform; EARS benchmark declares CC BY-NC 4.0 | **Keep as approved** for exact training-subset reproducibility, under the separate scope in `manifests/training/README.md` |
+| `manifests/protocol/` | EARS benchmark test selection and SETTA/DEMAND indexing metadata | No waveform; upstream dataset/code terms apply | Keep for deterministic EARS-D reconstruction with explicit attribution |
 | `results/**` | Project-computed metrics, statistics, and figures | No source audio or external checkpoint | Keep as compact paper regression references |
 
 ## File-level provenance findings

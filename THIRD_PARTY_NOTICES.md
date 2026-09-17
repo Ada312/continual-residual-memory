@@ -118,14 +118,28 @@ verified against SHA256
 `3f2102adb72c406cd34ad212d76b19db56e53bec2658b1bfb861fda1a1708963`.
 See `checkpoints/baselines/README.md`.
 
+## SETTA CMGAN checkpoint
+
+The main third-party CMGAN checkpoint is not redistributed. The exact
+`checkpoints/cmgan_ears.th` file is obtained from SETTA commit
+`08ea624f37dccc798f6bbffaf1f8f8e292c16e4b`, placed at
+`checkpoints/external/cmgan_ears.th`, and verified against SHA256
+`2649bc63511f6c59bf2340f6ab2305c9c3f5fbe1aa949434c176ede3ec65108f`.
+The upstream repository is GPL-3.0, but no checkpoint-specific redistribution
+statement was found; `checkpoints/README.md` therefore uses an upstream
+download instead of bundling the binary.
+
 ## Dataset-derived metadata
 
 Files under `manifests/` contain no audio. They record portable experiment
 identity, construction metadata, and causal order. EARS/EARS-WHAM-derived
-metadata is attributed to the EARS authors and should be treated under the
-upstream CC BY-NC 4.0 terms. DNS, WHAM!, DEMAND, LibriSpeech, and MUSAN retain
-their respective upstream terms. Files under `results/` are numerical outputs
-produced by this project, not redistributed source audio.
+metadata, including `manifests/protocol/ears_benchmark_v1_test_files.json`,
+is attributed to the EARS authors and should be treated under the upstream
+CC BY-NC 4.0 terms. `manifests/protocol/demand_16k_index.csv` is deterministic
+protocol metadata derived from the SETTA EARS-D indexing procedure and DEMAND;
+their respective terms continue to apply. DNS, WHAM!, DEMAND, LibriSpeech, and
+MUSAN retain their respective upstream terms. Files under `results/` are
+numerical outputs produced by this project, not redistributed source audio.
 
 ## Non-vendored upstream projects
 

@@ -1,10 +1,13 @@
 # Checkpoints
 
+See the user-facing acquisition and placement instructions in
+[`checkpoints/README.md`](../checkpoints/README.md).
+
 The small self-trained CRM files are kept for immediate load tests. Source/backbone weights remain external. Verify downloaded checkpoint hashes before inference; neither filenames nor architecture names alone identify a final model.
 
 | Purpose | Expected file / source | SHA256 | In repository |
 | --- | --- | --- | --- |
-| Frozen CMGAN Source | Official SETTA base `08ea624f` tracked `checkpoints/cmgan_ears.th`; pass via `--cmgan-checkpoint` | `2649bc63511f6c59bf2340f6ab2305c9c3f5fbe1aa949434c176ede3ec65108f` | No |
+| Frozen CMGAN Source | Official SETTA base `08ea624f` tracked `checkpoints/cmgan_ears.th`; download to `checkpoints/external/cmgan_ears.th` and pass via `--cmgan-checkpoint` | `2649bc63511f6c59bf2340f6ab2305c9c3f5fbe1aa949434c176ede3ec65108f` | No |
 | Utterance-local recovery | `checkpoints/crm/static_best.th` | `69c19970b7000b09d1b611b0dbc8786c24c9d9ca1c788cc077ff551225030523` | Yes |
 | Memory-conditioned refinement | `checkpoints/crm/dynamic_best.th` | `17d876b7a69d83b93dd335d3bad7c35bd4fda641f8176edb64094b974592be21` | Yes |
 | LaDen EARS foundation map | Download from SETTA `08ea624f` into `checkpoints/baselines/WavLM_EARS_map.th`; see `checkpoints/baselines/README.md` | `3f2102adb72c406cd34ad212d76b19db56e53bec2658b1bfb861fda1a1708963` | No |

@@ -4,7 +4,7 @@ All commands run from the repository root. Set paths to legally obtained dataset
 
 ## 1. Environment and EARS-WHAM
 
-Create the pinned environment from `environment.yml` (or install `requirements-core.txt`). Prepare EARS-WHAM using either the official benchmark output or the sample-equivalent raw-data path (8,192 training, 632 speaker-disjoint held-out):
+Create the pinned environment from `environment.yml` (or install `requirements-core.txt`). Download the external CMGAN checkpoint using `checkpoints/README.md`. Prepare EARS-WHAM using either the official benchmark output or the sample-equivalent raw-data path (8,192 training, 632 speaker-disjoint held-out):
 
 ```bash
 python data/prepare_ears_wham_from_benchmark.py \
@@ -12,11 +12,12 @@ python data/prepare_ears_wham_from_benchmark.py \
 # Alternative: python data/prepare_ears_wham_from_raw.py --help
 ```
 
-Verify the generated `subset_manifest.json` against `manifests/training/subset_manifest.json`. Fetch CMGAN Source from the pinned SETTA checkout and verify `docs/CHECKPOINTS.md`. Build the source cache:
+Verify the generated `subset_manifest.json` against `manifests/training/subset_manifest.json`. Build the source cache:
 
 ```bash
 python backbones/cmgan/inference.py --noisy-dir "$EARS_ROOT/noisy" \
-  --output-dir outputs/ears_source --checkpoint "$CMGAN_CHECKPOINT"
+  --output-dir outputs/ears_source \
+  --checkpoint checkpoints/external/cmgan_ears.th
 ```
 
 Train the two paper stages (frozen recipe, no target data):

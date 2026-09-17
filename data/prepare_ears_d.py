@@ -18,6 +18,7 @@ import torchaudio.functional as AF
 from tqdm import tqdm
 
 
+ROOT = Path(__file__).resolve().parents[1]
 EARS_BENCHMARK_V1_COMMIT = "97020e6"
 EARS_BENCHMARK_V1_TEST_FILES_SHA256 = (
     "ca38d2563ecdc3772375b61ce01197fabee3b12e3f970abadf51393c146b720d"
@@ -48,10 +49,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--test-files",
         type=Path,
-        default=Path("data/protocol/ears_benchmark_v1_test_files.json"),
+        default=ROOT / "manifests/protocol/ears_benchmark_v1_test_files.json",
     )
     parser.add_argument(
-        "--demand-index", type=Path, default=Path("data/demand/16k/index.csv")
+        "--demand-index",
+        type=Path,
+        default=ROOT / "manifests/protocol/demand_16k_index.csv",
     )
     parser.add_argument(
         "--demand-dir", type=Path, default=Path("data/demand/16k")
@@ -59,7 +62,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--audio-metadata-cache",
         type=Path,
-        default=Path("data/ears_benchmark_v1_audio_metadata.json"),
+        default=None,
+        help="Optional sf.info cache; audio is inspected directly when omitted.",
     )
     parser.add_argument("--ears-w-out", type=Path, required=True)
     parser.add_argument("--ears-d-out", type=Path, default=None)
@@ -91,7 +95,11 @@ def build_ears_w_rows(args: argparse.Namespace) -> list[dict]:
     if list(test_spec) != TEST_SPEAKERS:
         raise RuntimeError(f"unexpected EARS test speakers: {list(test_spec)}")
 
-    cached = json.loads(args.audio_metadata_cache.read_text(encoding="utf-8"))["files"]
+    cached = (
+        json.loads(args.audio_metadata_cache.read_text(encoding="utf-8"))["files"]
+        if args.audio_metadata_cache is not None
+        else {}
+    )
 
     def metadata(path: str | Path) -> dict:
         key = str(path)

@@ -1,140 +1,219 @@
-# Continual Residual Memory
+# Continual Residual Memory for Gradient-Free Test-Time Adaptation in Speech Enhancement
 
-Official implementation of **Continual Residual Memory for Gradient-Free Test-Time Adaptation in Speech Enhancement**.
+[![Python 3.9](https://img.shields.io/badge/Python-3.9-3776AB.svg)](environment.yml)
+[![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
 
-CRM augments a frozen speech enhancement backbone with utterance-local residual recovery and causal prototype-memory refinement. At test time, network parameters stay frozen: a query reads only the previous prototype state, the current utterance is enhanced, and its residual observation is written **after** the output. This is utterance-level adaptation, not frame-streaming or test-time optimization.
+## Overview
 
-## Method
+Continual Residual Memory (CRM) is a gradient-free continual test-time adaptation method for speech enhancement. It selectively recovers the discarded residual of a frozen enhancement backbone: the current utterance provides utterance-local recovery, while causal prototype memory from preceding utterances refines that recovery. During deployment, the backbone and all learned CRM parameters remain frozen; only the memory state evolves. Please refer to the accompanying paper for methodological details.
 
-```text
-Noisy waveform y_t -> frozen backbone estimate x_hat_t -> residual r_t
-  -> seven-channel Phi_t -> Utterance-Local Residual Recovery (P_s, H_t, g_static)
-  -> no-memory estimate X_hat_t^static
-  -> read Prototype Memory M_(t-1) with query u_t -> Memory Readout Z_t
-  -> Basis Branch B_t(H_t) x Coordinate Branch C_t(Z_t)
-  -> signed low-rank delta_g -> bounded g_dyn -> enhanced waveform
-  -> occupancy q_(t,tau) -> write observation o_t -> M_t
-```
-
-Implementation: [`crm/residual.py`](crm/residual.py), [`crm/recovery.py`](crm/recovery.py), [`crm/memory.py`](crm/memory.py), [`crm/refinement.py`](crm/refinement.py), and [`crm/model.py`](crm/model.py). The final class bodies were extracted from the frozen release candidate; model weights, state-dict attribute names, memory matching and update calculations are unchanged. [`docs/PAPER_CODE_NOTATION.md`](docs/PAPER_CODE_NOTATION.md) maps every paper symbol to the exact implementation.
+<p align="center">
+  <img src="docs/assets/crm_overview.png" alt="Overview of Continual Residual Memory" width="100%">
+</p>
+<p align="center"><em>Overview of Continual Residual Memory (CRM).</em></p>
 
 ## Installation
 
-Python 3.9 and the pinned [environment](environment.yml) are the recorded reproduction target. An existing compatible PyTorch environment can use:
+The recorded reproduction environment is NVIDIA/Linux with Python 3.9.25, PyTorch 2.8.0, CUDA 12.8, and cuDNN 9.10.02. From a clean environment:
 
 ```bash
+git clone https://github.com/Ada312/continual-residual-memory.git
+cd continual-residual-memory
+
+conda create -n crm python=3.9.25 -y
+conda activate crm
+python -m pip install --upgrade pip
+python -m pip install torch==2.8.0 torchaudio==2.8.0 \
+  --index-url https://download.pytorch.org/whl/cu128
 python -m pip install -r requirements-core.txt
 ```
 
-Install [baseline](requirements-baselines.txt) and [cross-backbone](requirements-cross-backbone.txt) dependencies only for those experiments. Third-party backbones are optional when importing `crm`.
+Use `requirements-baselines.txt` only for LaDen/MPol. Cross-backbone dependencies are optional and documented separately in [`docs/CROSS_BACKBONE.md`](docs/CROSS_BACKBONE.md).
 
-For repository checks, install `requirements-dev.txt`, then run
-`ruff check .` and `python -m pytest -q tests`.
+## Pretrained Checkpoints
 
-## External Resources
+The released CRM checkpoints are included; the third-party CMGAN checkpoint is downloaded separately from the pinned SETTA revision.
 
-Third-party resources are not redistributed in this repository unless a
-specific vendored compatibility component is identified in
-[`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md). Download datasets,
-upstream source trees, and backbone weights from their official providers and
-follow their respective licenses and terms of use. Repository paths and pinned
-versions are documented in [`THIRD_PARTY.md`](THIRD_PARTY.md).
-
-## Datasets
-
-| Resource | Official source | Use in this paper | Citation |
-| --- | --- | --- | --- |
-| EARS / EARS-WHAM | [EARS](https://github.com/facebookresearch/ears_dataset), [EARS-WHAM generator](https://github.com/sp-uhh/ears_benchmark) | Only offline CRM training source | [Richter et al., 2024](https://arxiv.org/abs/2406.06185) |
-| WHAM! | [Official site](http://wham.whisper.ai/) | Noise for EARS-WHAM | [Wichern et al., 2019](https://doi.org/10.1109/ICASSP.2019.8683555) |
-| DNS Challenge | [Official repository](https://github.com/microsoft/DNS-Challenge) | DNS 2020 synthetic no-reverb evaluation | [Reddy et al., 2020](https://doi.org/10.21437/Interspeech.2020-1768) |
-| DEMAND | [Official Zenodo record](https://doi.org/10.5281/zenodo.1227121) | Noise used to construct EARS-D | [Thiemann et al., 2013](https://doi.org/10.1121/1.4799597) |
-| LibriSpeech | [OpenSLR 12](https://www.openslr.org/12) | Clean speech for Libri-MUSAN evaluation mixtures | [Panayotov et al., 2015](https://doi.org/10.1109/ICASSP.2015.7178964) |
-| MUSAN | [OpenSLR 17](https://www.openslr.org/17) | Music noise and old-domain memory stream | [Snyder et al., 2015](https://arxiv.org/abs/1510.08484) |
-
-Training uses **only EARS-WHAM** (8,192 training and 632 speaker-disjoint held-out mixtures). The paper evaluates three separate empty-memory-start streams: DNS 2020 synthetic no-reverb (150), EARS-D (886), and Libri-MUSAN music (2,620). Dataset acquisition and preparation scripts are in [`data/`](data/) and [`docs/DATA.md`](docs/DATA.md). `manifests/` contains portable frozen identities and order; it contains no audio. Clean references are used for source-domain offline training and final evaluation, never for target-domain memory updates.
-
-## Pretrained Backbones
-
-| Resource | Official source | Use in this paper | Citation |
-| --- | --- | --- | --- |
-| CMGAN | [Official repository](https://github.com/ruizhecao96/CMGAN) | Main frozen enhancement backbone | [Cao et al., 2022](https://doi.org/10.21437/Interspeech.2022-517) |
-| StoRM | [Official repository](https://github.com/sp-uhh/storm) | StoRM-50 cross-backbone evaluation | [Lemercier et al., 2023](https://doi.org/10.1109/TASLP.2023.3294692) |
-| FlowSE | [Official repository](https://github.com/seongq/flowmse) | Flow-matching cross-backbone evaluation | [Lee et al., 2025](https://doi.org/10.1109/ICASSP49660.2025.10888274) |
-| GTCRN | [Official repository](https://github.com/Xiaobin-Rong/gtcrn) | Discriminative cross-backbone evaluation | [Rong et al., 2024](https://ieeexplore.ieee.org/document/10448310) |
-| FastEnhancer-B | [Official repository](https://github.com/aask1357/fastenhancer) | Streaming cross-backbone evaluation | [Ahn et al., 2026](https://arxiv.org/abs/2509.21867) |
-| UL-UNAS | [Official repository](https://github.com/Xiaobin-Rong/ul-unas) | Ultra-lightweight cross-backbone evaluation | [Rong et al., 2026](https://doi.org/10.1109/TASLPRO.2026.3661271) |
-| SETTA / LaDen / MPol | [Official repository](https://github.com/tobiaaa/SETTA) | Gradient-based TTA baselines | [LaDen](https://arxiv.org/abs/2509.04280), [MPol](https://arxiv.org/abs/2601.14770) |
-| WavLM Large | [Official model](https://huggingface.co/microsoft/wavlm-large) | Frozen LaDen embedding encoder | [Chen et al., 2022](https://arxiv.org/abs/2110.13900) |
-
-CMGAN is the main frozen backbone. Five independently trained CRM checkpoint
-pairs are provided for the recorded cross-backbone artifacts. Small
-self-trained CRM checkpoints are included; obtain CMGAN and the other upstream
-checkpoint files separately and check their hashes in
-[`docs/CHECKPOINTS.md`](docs/CHECKPOINTS.md). Upstream repository commits and
-exact inference options are in
-[`docs/CROSS_BACKBONE.md`](docs/CROSS_BACKBONE.md).
-
-LaDen's third-party EARS foundation map is also external. Download and verify
-it from SETTA commit `08ea624f` into
-`checkpoints/baselines/WavLM_EARS_map.th` using
-[`checkpoints/baselines/README.md`](checkpoints/baselines/README.md); the
-expected SHA256 is
-`3f2102adb72c406cd34ad212d76b19db56e53bec2658b1bfb861fda1a1708963`.
-The FlowSE experiment uses Lee et al.'s `seongq/flowmse` at commit
-`f6b479d13fecc6cb6f12394f46dfc6799fb479b6` and its official
-VoiceBank-DEMAND checkpoint. The upstream code and checkpoint remain external;
-their exact acquisition, hash and inference settings are recorded in
-[`docs/CROSS_BACKBONE.md`](docs/CROSS_BACKBONE.md).
-
-## Training
-
-Both stages use 16 kHz audio, 512-point Hann STFT/128-sample hop, 2-s crops, batch size 8, AdamW with weight decay `1e-4`, and cosine scheduling. The Stage 1 projector is trained for 4 epochs at `3e-4` and frozen. Stage 2 optimizes only the Basis/Coordinate Branches for 3 epochs at `1e-3` with grouped EARS-WHAM histories, `K_train=2`, memory dropout 0.20, and the paper counterfactual objective. Full parameters and runnable commands are in [`docs/REPRODUCTION.md`](docs/REPRODUCTION.md).
+| Component | Path | SHA256 |
+| --- | --- | --- |
+| Frozen CMGAN backbone | `checkpoints/external/cmgan_ears.th` | `2649bc63511f6c59bf2340f6ab2305c9c3f5fbe1aa949434c176ede3ec65108f` |
+| Utterance-local residual recovery | `checkpoints/crm/static_best.th` | `69c19970b7000b09d1b611b0dbc8786c24c9d9ca1c788cc077ff551225030523` |
+| Memory-conditioned refinement | `checkpoints/crm/dynamic_best.th` | `17d876b7a69d83b93dd335d3bad7c35bd4fda641f8176edb64094b974592be21` |
 
 ```bash
-python scripts/train_recovery.py --help
-python scripts/train_refinement.py --help
+mkdir -p checkpoints/external
+curl -L \
+  https://raw.githubusercontent.com/tobiaaa/SETTA/08ea624f37dccc798f6bbffaf1f8f8e292c16e4b/checkpoints/cmgan_ears.th \
+  -o checkpoints/external/cmgan_ears.th
+echo "2649bc63511f6c59bf2340f6ab2305c9c3f5fbe1aa949434c176ede3ec65108f  checkpoints/external/cmgan_ears.th" \
+  | sha256sum -c -
 ```
 
-The public training entries invoke the paper-aligned implementations under `crm/_training/`. Historical checkpoint attributes (`input`, `blocks`, `output`, `delta_basis`, `delta_coordinates`, and the inactive `memory_adapter`) remain load-compatible. Deployment uses `K_max=64` and readout mass 0.95; the frozen **training** config has `readout_mass=null` for `K_train=2`. This distinction is recorded without modifying either procedure.
+The CMGAN file was published by the SETTA/LaDen-MPol implementation and was not trained by the CRM authors. Its provenance and redistribution decision are documented in [`checkpoints/README.md`](checkpoints/README.md) and [`docs/CHECKPOINTS.md`](docs/CHECKPOINTS.md).
 
-## Evaluation
+## Data Preparation
 
-| Paper experiment | Entry | Data/outputs |
-| --- | --- | --- |
-| Main comparison: Backbone, LaDen, MPol, CRM (no memory), CRM | `scripts/eval_main.py`, `scripts/eval_baselines.py` | DNS / EARS-D / Libri-MUSAN; seven shared metrics |
-| Continual progression (PESQ/COVL) | `scripts/plot_continual.py` | Frozen DNS 150 per-file CSVs; trailing causal 10-utterance mean |
-| Libri-MUSAN to DNS transition | `scripts/eval_cross_domain.py`, `scripts/aggregate_cross_domain.py` | 2,620 post-inference writes, keep state, then 150 DNS writes |
-| Cross-backbone applicability | `scripts/eval_cross_backbone.py` | Five upstream backbones, DNS 150, backbone-specific CRM checkpoints |
-| Parameters, RTF, registered-op FLOPs, storage | `scripts/count_parameters.py`, `scripts/measure_rtf.py`, `scripts/measure_flops.py`, `scripts/estimate_memory_storage.py` | Frozen protocol; see [`docs/EFFICIENCY.md`](docs/EFFICIENCY.md) |
+Raw datasets are not redistributed. Obtain them from the official [EARS](https://github.com/facebookresearch/ears_dataset), [EARS benchmark](https://github.com/sp-uhh/ears_benchmark), [WHAM!](http://wham.whisper.ai/), [DNS Challenge](https://github.com/microsoft/DNS-Challenge), [DEMAND](https://doi.org/10.5281/zenodo.1227121), [LibriSpeech](https://www.openslr.org/12), and [MUSAN](https://www.openslr.org/17) sources and follow their licenses.
 
-Run `python scripts/plot_continual.py` to regenerate the manuscript's two plots from the included CSVs, without waveform inference or metric recomputation. Reference images are under `results/continual/`. All commands and input layout are documented in [`docs/REPRODUCTION.md`](docs/REPRODUCTION.md).
+| Split | Role | Expected size | Frozen protocol |
+| --- | --- | ---: | --- |
+| EARS-WHAM train | CRM training only | 8,192 | `manifests/training/subset_manifest.json` |
+| EARS-WHAM held-out | checkpoint selection only | 632 | `manifests/training/subset_manifest.json` |
+| DNS 2020 synthetic no-reverb | target evaluation only | 150 | `manifests/dns.csv` |
+| EARS-D | target evaluation only | 886 | `manifests/ears_d.csv` |
+| Libri-MUSAN | target evaluation only | 2,620 | `manifests/musan_music.csv` |
 
-## Paper-to-Code Correspondence
+Set a local data root and prepare the fixed EARS-WHAM training view from an official EARS-WHAM v1 build:
 
-The [notation map](docs/PAPER_CODE_NOTATION.md) follows the paper's three method subsections. Public entry names use *utterance-local recovery* and *memory-conditioned refinement*. `g_static`, `g_dyn`, `alpha_dyn`, and `delta_g` retain the paper's mathematical meaning. Filenames ending in `static` or `dynamic` in frozen result artifacts are preserved for source identity, not alternative model families.
+```bash
+export DATA_ROOT=/path/to/crm-data
+export EARS_WHAM_V1_ROOT=/path/to/EARS-WHAM
+
+python data/prepare_ears_wham_from_benchmark.py \
+  --ears-wham-root "$EARS_WHAM_V1_ROOT" \
+  --out-dir "$DATA_ROOT/ears_wham"
+```
+
+Place the official DNS no-reverb files under `$DATA_ROOT/dns/{clean,noisy}` with filenames matching `manifests/dns.csv`. Reconstruct EARS-D and Libri-MUSAN as follows:
+
+```bash
+python data/prepare_ears_d.py \
+  --ears-dir /path/to/EARS \
+  --wham-dir /path/to/WHAM/audio \
+  --test-files manifests/protocol/ears_benchmark_v1_test_files.json \
+  --demand-index manifests/protocol/demand_16k_index.csv \
+  --demand-dir /path/to/DEMAND/16k \
+  --ears-w-out "$DATA_ROOT/ears_w_test" \
+  --ears-d-out "$DATA_ROOT/ears_d"
+
+python data/prepare_libri_musan.py \
+  --manifest manifests/musan_music_construction.csv \
+  --librispeech-root /path/to/LibriSpeech/test-clean \
+  --musan-root /path/to/musan \
+  --output-root "$DATA_ROOT/libri_musan" \
+  --verify-hashes
+```
+
+Each target root must contain matching `clean/` and `noisy/` WAV files. Target clean speech is used only by offline evaluation and never by inference or memory update. See [`docs/DATA.md`](docs/DATA.md) for protocol details.
+
+## Reproducing the Main Results
+
+The two paths below are intentionally distinct. The included CRM checkpoints support direct inference/evaluation; from-scratch reproduction retrains Stage 1 and Stage 2 before evaluation.
+
+### Stage 1: Utterance-Local Residual Recovery
+
+First cache the frozen CMGAN estimates for EARS-WHAM, then train Stage 1 with the paper configuration:
+
+```bash
+python backbones/cmgan/inference.py \
+  --noisy-dir "$DATA_ROOT/ears_wham/noisy" \
+  --output-dir "$DATA_ROOT/ears_wham/source" \
+  --checkpoint checkpoints/external/cmgan_ears.th
+
+python scripts/train_recovery.py \
+  --config configs/cmgan/recovery_training.json \
+  --clean-dir "$DATA_ROOT/ears_wham/clean" \
+  --noisy-dir "$DATA_ROOT/ears_wham/noisy" \
+  --source-dir "$DATA_ROOT/ears_wham/source" \
+  --output-dir outputs/train_recovery
+```
+
+This stage uses 16 kHz audio, a 512-point Hann STFT with 128-sample hop, 2-s crops, batch size 8, AdamW with weight decay `1e-4`, cosine scheduling, 4 epochs, and learning rate `3e-4`.
+
+### Stage 2: Memory-Conditioned Refinement
+
+```bash
+python scripts/train_refinement.py \
+  --config configs/cmgan/refinement_training.json \
+  --clean-dir "$DATA_ROOT/ears_wham/clean" \
+  --noisy-dir "$DATA_ROOT/ears_wham/noisy" \
+  --source-dir "$DATA_ROOT/ears_wham/source" \
+  --metadata "$DATA_ROOT/ears_wham/metadata.txt" \
+  --recovery-checkpoint outputs/train_recovery/best.th \
+  --context-cache outputs/cache/ears_wham_k2_grouped.pt \
+  --output-dir outputs/train_refinement
+```
+
+If the context cache does not exist, the entry creates it from causal EARS-WHAM histories grouped by WHAM recording location. The fixed Stage 2 configuration uses 3 epochs, learning rate `1e-3`, `K_train=2`, memory dropout `0.20`, `tau_cf=0.02`, `lambda_cf=0.10`, and `lambda_cons=0.10`. Training uses `tau_mem=0.50` without posterior-mass truncation; deployment uses `K_max=64` and `gamma_read=0.95`. The remaining fixed values are `p=0.30`, `d=4`, `g_max=0.10`, and `alpha_dyn=0.08`.
+
+### Inference
+
+For the released-checkpoint path, run one independent empty-memory stream per target dataset:
+
+```bash
+python scripts/eval_main.py \
+  --dataset dns \
+  --noisy-dir "$DATA_ROOT/dns/noisy" \
+  --clean-dir "$DATA_ROOT/dns/clean" \
+  --cmgan-checkpoint checkpoints/external/cmgan_ears.th \
+  --recovery-checkpoint checkpoints/crm/static_best.th \
+  --refinement-checkpoint checkpoints/crm/dynamic_best.th \
+  --output-dir outputs/main/dns
+```
+
+Repeat with `--dataset ears_d` and `--dataset libri_musan`, changing the data and output roots. For a from-scratch run, replace the two CRM checkpoint paths with `outputs/train_recovery/best.th` and `outputs/train_refinement/best.th`.
+
+### Evaluation
+
+`scripts/eval_main.py` automatically evaluates Frozen CMGAN, CRM without memory, and CRM with the shared seven-metric pipeline. To evaluate an existing CRM waveform directory directly:
+
+```bash
+python metrics/evaluate.py \
+  --clean-dir "$DATA_ROOT/dns/clean" \
+  --noisy-dir "$DATA_ROOT/dns/noisy" \
+  --denoised-dir outputs/main/dns/crm/wav \
+  --out-dir outputs/main/dns/crm/metrics \
+  --method crm \
+  --references manifests/dns.csv \
+  --fs 16000
+```
+
+LaDen/MPol reproduction is optional and documented in [`docs/BASELINES.md`](docs/BASELINES.md). Additional cross-backbone experiments are documented separately in [`docs/CROSS_BACKBONE.md`](docs/CROSS_BACKBONE.md). The complete command reference is in [`docs/REPRODUCTION.md`](docs/REPRODUCTION.md).
+
+## Expected Reproduction
+
+PESQ sanity checks for the released checkpoints are:
+
+| Dataset | Frozen CMGAN | CRM |
+| --- | ---: | ---: |
+| DNS | 3.00 | 3.11 |
+| EARS-D | 2.62 | 2.64 |
+| Libri-MUSAN | 2.16 | 2.27 |
+
+These values are provided only as reproduction sanity checks. Please refer to the paper for the complete evaluation results. Small numerical differences may arise from stochastic training and environment differences.
+
+## Repository Structure
+
+```text
+continual-residual-memory/
+├── crm/          # CRM model, memory, and two-stage training implementation
+├── backbones/    # CMGAN compatibility code and optional backbone adapters
+├── configs/      # Frozen training and deployment configurations
+├── data/         # Dataset preparation entries
+├── scripts/      # Training, inference, evaluation, and aggregation entries
+├── checkpoints/  # Released CRM weights and external-checkpoint instructions
+├── manifests/    # Fixed identities, splits, and causal test order
+├── metrics/      # Shared seven-metric evaluation pipeline
+├── docs/         # Detailed reproduction and supplementary protocols
+└── tests/        # Checkpoint, causal-order, and pipeline checks
+```
+
+## Acknowledgements
+
+The main CMGAN checkpoint and the LaDen/MPol baseline implementation are provided by [SETTA](https://github.com/tobiaaa/SETTA). The frozen backbone is based on [CMGAN](https://github.com/ruizhecao96/CMGAN), and the EARS-WHAM preparation follows the [EARS benchmark](https://github.com/sp-uhh/ears_benchmark). We thank the authors for releasing their code, checkpoints, and data protocols.
 
 ## Citation
 
+If you find this work useful, please cite:
+
 ```bibtex
-@misc{shan2026crm,
+@misc{shan2026continual,
   title  = {Continual Residual Memory for Gradient-Free Test-Time Adaptation in Speech Enhancement},
   author = {Shan, Yijia and Wang, Tianrui and Wang, Zixiang and Wang, Yu and Chen, Xie},
-  year   = {2026},
-  url    = {https://github.com/Ada312/continual-residual-memory}
+  year   = {2026}
 }
 ```
 
-Venue and DOI fields should be added after publication metadata is finalized.
+## License
 
-## License and Provenance
-
-See [LICENSE](LICENSE), [`THIRD_PARTY.md`](THIRD_PARTY.md),
-[`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md),
-[`docs/IMPLEMENTATION_PROVENANCE.md`](docs/IMPLEMENTATION_PROVENANCE.md), and
-the [release verification status](docs/RELEASE_STATUS.md). `LICENSE` applies
-to project code and the identified GPL-compatible derivatives; retained
-EARS-WHAM selection metadata remains under the upstream CC BY-NC 4.0 terms
-documented in [`manifests/training/README.md`](manifests/training/README.md).
-The repository contains no original `.git` history, benchmark audio, full
-waveform outputs, large upstream weights, training caches, or private audit
-dumps.
+Project code is released under [GPL-3.0](LICENSE). Third-party components and protocol metadata remain subject to their respective terms; see [`THIRD_PARTY.md`](THIRD_PARTY.md) and [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).

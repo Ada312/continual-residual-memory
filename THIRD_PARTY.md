@@ -23,6 +23,12 @@ The files under `backbones/cross_backbone/` are local adapters that import
 separate upstream checkouts. They do not contain the five upstream model
 implementations or weights.
 
+The main `cmgan_ears.th` checkpoint is tracked by SETTA at the pinned
+GPL-3.0 revision, but no checkpoint-specific redistribution statement was
+found. It is therefore downloaded from SETTA into
+`checkpoints/external/cmgan_ears.th` and verified by SHA256 rather than
+redistributed here. See `checkpoints/README.md`.
+
 ## Datasets
 
 | Dataset | Official source | Repository use |
@@ -35,7 +41,8 @@ implementations or weights.
 | MUSAN | `https://www.openslr.org/17` | Libri-MUSAN music noise and carried-memory stream |
 
 No waveform from these datasets is tracked. Portable manifests contain only
-experiment identities/order and are addressed separately in the notices.
+experiment identities/order and lightweight construction protocol metadata
+and are addressed separately in the notices.
 The EARS-WHAM selection files under `manifests/training/` remain subject to
 the upstream CC BY-NC 4.0 terms, not the project-code GPL-3.0 license.
 
