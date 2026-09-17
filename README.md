@@ -37,7 +37,7 @@ The pretrained CMGAN checkpoint released by [SETTA](https://github.com/tobiaaa/S
 
 CRM is trained on EARS-WHAM and evaluated on DNS 2020 synthetic no-reverb, EARS-D, and Libri-MUSAN. Raw datasets are not redistributed.
 
-For example, prepare the fixed EARS-WHAM training split from an official EARS-WHAM v1 build:
+Before training, prepare EARS-WHAM and generate the frozen CMGAN outputs:
 
 ```bash
 export DATA_ROOT=/path/to/crm-data
@@ -52,13 +52,13 @@ python backbones/cmgan/inference.py \
   --checkpoint checkpoints/external/cmgan_ears.th
 ```
 
-See [`data/README.md`](data/README.md) for dataset sources, target-set construction, expected directory layouts, and fixed manifests.
+See [`data/README.md`](data/README.md) for complete preparation instructions for EARS-WHAM, DNS, EARS-D, and Libri-MUSAN.
 
 ## Training
 
 ### Stage 1: Utterance-Local Residual Recovery
 
-Stage 1 trains an utterance-local residual recovery module on top of the frozen CMGAN backbone.
+After completing the data preparation above, Stage 1 trains an utterance-local residual recovery module on top of the frozen CMGAN backbone.
 
 ```bash
 python scripts/train_recovery.py \
@@ -87,7 +87,20 @@ python scripts/train_refinement.py \
 
 ## Inference and Evaluation
 
-Enhance a target-domain stream with the released CRM checkpoints:
+Use the checkpoints produced by Stage 1 and Stage 2 to enhance a target-domain stream:
+
+```bash
+python scripts/eval_main.py \
+  --dataset dns \
+  --noisy-dir "$DATA_ROOT/dns/noisy" \
+  --clean-dir "$DATA_ROOT/dns/clean" \
+  --cmgan-checkpoint checkpoints/external/cmgan_ears.th \
+  --recovery-checkpoint outputs/train_recovery/best.th \
+  --refinement-checkpoint outputs/train_refinement/best.th \
+  --output-dir outputs/dns
+```
+
+Alternatively, use the released CRM checkpoints in `checkpoints/crm/` for direct evaluation without retraining:
 
 ```bash
 python scripts/eval_main.py \
@@ -100,7 +113,9 @@ python scripts/eval_main.py \
   --output-dir outputs/dns
 ```
 
-The same entry supports `dns`, `ears_d`, and `libri_musan`. Each dataset is processed as an independent causal stream. To evaluate an existing enhanced-waveform directory with the seven supported speech-enhancement metrics:
+The same entry supports `dns`, `ears_d`, and `libri_musan`. Each dataset is processed as an independent causal stream.
+
+To evaluate an existing enhanced-waveform directory with the seven supported speech-enhancement metrics:
 
 ```bash
 python metrics/evaluate.py \
