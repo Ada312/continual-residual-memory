@@ -1,3 +1,0 @@
--r requirements-core.txt
-pytest>=8,<9
-ruff>=0.13,<1

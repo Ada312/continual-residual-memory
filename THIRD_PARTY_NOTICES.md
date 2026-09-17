@@ -15,14 +15,12 @@ Covered paths:
 - `backbones/registry.py`
 - `backbones/cmgan/`
 - `metrics/_frozen/`
-- `patches/setta_final_baselines.patch`
 
 The CMGAN model/transforms and frozen evaluator were extracted from the pinned
 SETTA implementation. Some files are unchanged; others were reduced, relocated,
 or modified for strict checkpoint loading, standalone inference, current
 PyTorch compatibility, robust metric failure handling, or removal of unused
-training helpers. The baseline patch records this project's modifications to a
-separate SETTA checkout. These modified versions were prepared in 2026.
+training helpers. These modified versions were prepared in 2026.
 
 SETTA is licensed under GNU GPL version 3. A complete copy is provided in
 `LICENSE`. Copyright remains with the respective SETTA contributors.
@@ -110,24 +108,14 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-## WavLM EARS map
-
-The LaDen EARS foundation map is not redistributed. It is downloaded from the
-pinned SETTA repository into `checkpoints/baselines/WavLM_EARS_map.th` and
-verified against SHA256
-`3f2102adb72c406cd34ad212d76b19db56e53bec2658b1bfb861fda1a1708963`.
-See `checkpoints/baselines/README.md`.
-
 ## SETTA CMGAN checkpoint
 
 The main third-party CMGAN checkpoint is not redistributed. The exact
 `checkpoints/cmgan_ears.th` file is obtained from SETTA commit
 `08ea624f37dccc798f6bbffaf1f8f8e292c16e4b`, placed at
-`checkpoints/external/cmgan_ears.th`, and verified against SHA256
-`2649bc63511f6c59bf2340f6ab2305c9c3f5fbe1aa949434c176ede3ec65108f`.
-The upstream repository is GPL-3.0, but no checkpoint-specific redistribution
-statement was found; `checkpoints/README.md` therefore uses an upstream
-download instead of bundling the binary.
+`checkpoints/external/cmgan_ears.th`. The upstream repository is GPL-3.0, but
+no checkpoint-specific redistribution statement was found; the repository
+therefore uses an upstream download instead of bundling the binary.
 
 ## Dataset-derived metadata
 
@@ -140,14 +128,3 @@ protocol metadata derived from the SETTA EARS-D indexing procedure and DEMAND;
 their respective terms continue to apply. DNS, WHAM!, DEMAND, LibriSpeech, and
 MUSAN retain their respective upstream terms. Files under `results/` are
 numerical outputs produced by this project, not redistributed source audio.
-
-## Non-vendored upstream projects
-
-StoRM, FlowSE, GTCRN, FastEnhancer-B, and UL-UNAS implementations and Source
-weights are not present. Only local invocation adapters and independently
-trained CRM recovery/refinement weights are tracked. The FlowSE experiment
-uses Lee et al., "FlowSE: Flow Matching-based Speech Enhancement"
-(`https://github.com/seongq/flowmse`) at commit
-`f6b479d13fecc6cb6f12394f46dfc6799fb479b6`. That pinned revision contains no
-license file or license statement, so no redistribution permission is
-inferred; its source and checkpoint remain external.
