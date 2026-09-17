@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import argparse
 import csv
-import hashlib
 import json
 from pathlib import Path
 
@@ -17,10 +16,6 @@ import numpy as np
 
 
 EXPECTED_N = 150
-
-
-def sha256(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def load_inputs(manifest_path: Path, static_path: Path, dynamic_path: Path):
@@ -88,7 +83,7 @@ def draw(methods, metric_column: str, metric_label: str, window: int, output: Pa
 def main() -> None:
     here = Path(__file__).resolve().parent
     parser = argparse.ArgumentParser()
-    parser.add_argument("--manifest", type=Path, default=here.parent / "manifests/dns.csv")
+    parser.add_argument("--manifest", type=Path, default=here.parent / "data/manifests/dns.csv")
     parser.add_argument("--static", type=Path, default=here.parent / "results/main/per_utterance/dns_static.csv")
     parser.add_argument("--dynamic", type=Path, default=here.parent / "results/main/per_utterance/dns_dynamic.csv")
     parser.add_argument("--output-dir", type=Path, default=here.parent / "outputs/figures")
@@ -107,10 +102,10 @@ def main() -> None:
         "order": "manifest test_order, converted from 0-based to x=1..150",
         "smoothing": f"causal trailing moving average, window={args.window}, no future samples",
         "raw_points_visible": False,
-        "input_sha256": {
-            "manifest": sha256(args.manifest),
-            "static": sha256(args.static),
-            "dynamic": sha256(args.dynamic),
+        "inputs": {
+            "manifest": str(args.manifest),
+            "static": str(args.static),
+            "dynamic": str(args.dynamic),
         },
         "raw_gain_summary": {
             "pesq_min": float(pesq.min()), "pesq_max": float(pesq.max()),

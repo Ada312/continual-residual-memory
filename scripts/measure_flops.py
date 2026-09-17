@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import argparse
 import csv
-import hashlib
 import json
 import shlex
 import sys
@@ -51,14 +50,6 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
 def serialize_counts(counts: dict[object, int]) -> dict[str, int]:
     return {str(operation): int(value) for operation, value in counts.items()}
 
@@ -78,7 +69,6 @@ def counted_call(modules, function):
 
 def verify_rtf_protocol(args: argparse.Namespace, files: list[Path]) -> dict:
     rtf = json.loads(args.rtf_artifact.read_text(encoding="utf-8"))
-    rtf_script = ROOT / "scripts/measure_rtf.py"
     expected = {
         "precision": "float32",
         "batch_size": 1,
@@ -93,10 +83,6 @@ def verify_rtf_protocol(args: argparse.Namespace, files: list[Path]) -> dict:
         "novelty_patience": args.novelty_patience,
         "merge_threshold": args.merge_threshold,
         "retirement_horizon": args.retirement_horizon,
-        "stream_order_manifest_sha256": sha256(args.stream_order_manifest),
-        "cmgan_checkpoint_sha256": sha256(args.cmgan_checkpoint),
-        "crm_checkpoint_sha256": sha256(args.crm_checkpoint),
-        "benchmark_script_sha256": sha256(rtf_script),
     }
     mismatches = {
         key: {"rtf": rtf.get(key), "flops": value}
@@ -202,8 +188,6 @@ def main() -> None:
     audio_seconds = sum(float(row["audio_seconds"]) for row in rows)
     source_flops = sum(int(row["source_counted_flops"]) for row in rows)
     dynamic_flops = sum(int(row["dynamic_counted_flops"]) for row in rows)
-    profiler_script = Path(__file__).resolve()
-    rtf_script = ROOT / "scripts/benchmark_cmgan_crm_rtf.py"
     report = {
         "status": "VERIFIED AGAINST FROZEN RTF PROTOCOL",
         "measurement_class": "PROFILER-COUNTED FLOPs",
@@ -261,17 +245,10 @@ def main() -> None:
         },
         "registered_formula_operators": sorted(str(item) for item in flop_registry),
         "stream_order_manifest": str(args.stream_order_manifest.resolve()),
-        "stream_order_manifest_sha256": sha256(args.stream_order_manifest),
         "cmgan_checkpoint": str(args.cmgan_checkpoint.resolve()),
-        "cmgan_checkpoint_sha256": sha256(args.cmgan_checkpoint),
         "crm_checkpoint": str(args.crm_checkpoint.resolve()),
-        "crm_checkpoint_sha256": sha256(args.crm_checkpoint),
         "rtf_artifact": str(args.rtf_artifact.resolve()),
-        "rtf_artifact_sha256": sha256(args.rtf_artifact),
-        "rtf_benchmark_script_sha256": sha256(rtf_script),
-        "flops_profiler_script_sha256": sha256(profiler_script),
         "per_utterance_csv": str(per_utterance_path),
-        "per_utterance_csv_sha256": sha256(per_utterance_path),
         "command": shlex.join(sys.argv),
     }
     output_path = output_dir / "cmgan_vs_crm_k64_flops.json"

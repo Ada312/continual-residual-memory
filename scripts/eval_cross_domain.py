@@ -38,7 +38,7 @@ def main() -> None:
          ["--initial-memory-state", str(state_path)]),
     ):
         run([sys.executable, "scripts/infer_stream.py", "--mode", "crm",
-             "--manifest", str(ROOT / "manifests" / f"{dataset}.csv"),
+             "--manifest", str(ROOT / "data/manifests" / f"{dataset}.csv"),
              "--noisy-dir", str(noisy), "--source-dir", str(source),
              "--output-dir", str(args.output_dir / dataset / "wav"),
              "--checkpoint", str(args.checkpoint), "--device", args.device,
@@ -47,7 +47,7 @@ def main() -> None:
          "--noisy-dir", str(args.dns_noisy_dir),
          "--denoised-dir", str(args.output_dir / "dns/wav"),
          "--out-dir", str(args.output_dir / "dns/metrics"), "--method", "crm_cross_domain",
-         "--references", str(ROOT / "manifests/dns.csv"), "--fs", "16000",
+         "--references", str(ROOT / "data/manifests/dns.csv"), "--fs", "16000",
          "--workers", str(args.workers)])
 
 

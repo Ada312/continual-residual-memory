@@ -8,10 +8,10 @@ build/
 dist/
 *.egg-info/
 outputs/
+results/
 data/*/
 !data/*.py
 !data/*.md
-checkpoints/external/
 cache/
 logs/
 wandb/

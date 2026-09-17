@@ -6,8 +6,7 @@ paper. They contain metadata and identities, not waveform audio.
 They are derived from EARS and the EARS-WHAM benchmark protocol:
 
 - EARS: `https://github.com/facebookresearch/ears_dataset`
-- EARS-WHAM generator: `https://github.com/sp-uhh/ears_benchmark`, audited at
-  commit `97020e6`
+- EARS-WHAM generator: `https://github.com/sp-uhh/ears_benchmark`
 - Citation: Julius Richter et al., "EARS: An Anechoic Fullband Speech Dataset
   Benchmarked for Speech Enhancement and Dereverberation," Interspeech 2024.
 

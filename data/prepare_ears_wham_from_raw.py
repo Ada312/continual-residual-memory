@@ -15,25 +15,22 @@ from tqdm import tqdm
 
 try:
     from data.prepare_ears_wham_from_benchmark import (
-        EARS_BENCHMARK_V1_COMMIT,
-        EARS_BENCHMARK_V1_GENERATOR_SHA256,
-        sample_id,
-        select_train_rows,
+        load_fixed_selection,
+        select_fixed_rows,
         snr_bin,
         speech_style,
     )
 except ModuleNotFoundError:
     from prepare_ears_wham_from_benchmark import (
-        EARS_BENCHMARK_V1_COMMIT,
-        EARS_BENCHMARK_V1_GENERATOR_SHA256,
-        sample_id,
-        select_train_rows,
+        load_fixed_selection,
+        select_fixed_rows,
         snr_bin,
         speech_style,
     )
 
 
 VERIFIED_REFERENCE_PAIRS = 284
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def parse_args() -> argparse.Namespace:
@@ -49,7 +46,11 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--out-dir", type=Path, required=True)
     parser.add_argument("--train-size", type=int, default=8192)
-    parser.add_argument("--selection-seed", type=int, default=1337)
+    parser.add_argument(
+        "--selection-manifest",
+        type=Path,
+        default=ROOT / "data/manifests/training/subset_manifest.json",
+    )
     parser.add_argument("--generation-seed", type=int, default=42)
     parser.add_argument("--sample-rate", type=int, default=48_000)
     parser.add_argument("--min-snr", type=float, default=-2.5)
@@ -196,7 +197,6 @@ def generate_selected(
     rows: list[dict],
     clean_dir: Path,
     noisy_dir: Path,
-    selection_seed: int,
     sample_rate: int,
     workers: int,
 ) -> tuple[list[dict], list[str]]:
@@ -237,7 +237,7 @@ def generate_selected(
             start, end = row["speech_start"], row["speech_end"]
             clean_segment = speech[start:end]
             noisy_segment = mixture[start:end]
-            identifier = sample_id(row, selection_seed)
+            identifier = row["sample_id"]
             sf.write(clean_dir / identifier, clean_segment, sample_rate, subtype="FLOAT")
             sf.write(noisy_dir / identifier, noisy_segment, sample_rate, subtype="FLOAT")
             group_metadata.append(
@@ -254,7 +254,7 @@ def generate_selected(
                     **{
                         key: value
                         for key, value in row.items()
-                        if key not in {"speech_path", "noise_path"}
+                        if key not in {"speech_path", "noise_path", "sample_id"}
                     },
                 }
             )
@@ -341,7 +341,14 @@ def main() -> None:
         min_length,
         cut_length,
     )
-    selected_train = select_train_rows(train_pool, args.train_size, args.selection_seed)
+    fixed_rows = load_fixed_selection(args.selection_manifest)
+    selected_train = select_fixed_rows(train_pool, fixed_rows, "train")
+    validation_rows = select_fixed_rows(validation_rows, fixed_rows, "validation")
+    if len(selected_train) != args.train_size:
+        raise RuntimeError(
+            f"fixed selection has {len(selected_train)} training rows, "
+            f"not requested {args.train_size}"
+        )
 
     clean_dir = args.out_dir / "clean"
     noisy_dir = args.out_dir / "noisy"
@@ -353,7 +360,6 @@ def main() -> None:
         selected_train + validation_rows,
         clean_dir,
         noisy_dir,
-        args.selection_seed,
         args.sample_rate,
         args.mix_workers,
     )
@@ -369,8 +375,6 @@ def main() -> None:
     audit = {
         "description": "SETTA-aligned EARS-WHAM v1 source-only adapter subset",
         "ears_benchmark_repository": "https://github.com/sp-uhh/ears_benchmark",
-        "ears_benchmark_commit": EARS_BENCHMARK_V1_COMMIT,
-        "upstream_generator_sha256": EARS_BENCHMARK_V1_GENERATOR_SHA256,
         "sparse_io_equivalence": {
             "reference_pairs": VERIFIED_REFERENCE_PAIRS,
             "clean_max_abs_error": 0.0,
@@ -378,11 +382,8 @@ def main() -> None:
             "csv_prefix_exact": True,
         },
         "generation_seed": args.generation_seed,
-        "selection_seed": args.selection_seed,
-        "selection_strategy": (
-            "proportional speaker x speech_style x 5dB_SNR_bin strata; "
-            "within-stratum greedy WHAM recording diversity"
-        ),
+        "selection_manifest": str(args.selection_manifest.resolve()),
+        "selection_strategy": "exact identities from the repository's fixed selection metadata",
         "sample_rate": args.sample_rate,
         "train_pool": summarize(train_pool, args.sample_rate),
         "selected_train": summarize(generated_train, args.sample_rate),

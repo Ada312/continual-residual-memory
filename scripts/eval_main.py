@@ -31,7 +31,7 @@ def main() -> None:
     parser.add_argument("--workers", type=int, default=4)
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
-    manifest = ROOT / "manifests" / MANIFESTS[args.dataset]
+    manifest = ROOT / "data/manifests" / MANIFESTS[args.dataset]
     source = args.output_dir / "backbone/wav"
     run([sys.executable, "backbones/cmgan/inference.py", "--noisy-dir", str(args.noisy_dir),
          "--output-dir", str(source), "--checkpoint", str(args.cmgan_checkpoint),

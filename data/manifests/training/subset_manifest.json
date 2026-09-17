@@ -1,8 +1,6 @@
 {
   "description": "SETTA-aligned EARS-WHAM v1 source-only adapter subset",
   "ears_benchmark_repository": "https://github.com/sp-uhh/ears_benchmark",
-  "ears_benchmark_commit": "97020e6",
-  "upstream_generator_sha256": "7b863b756331cf95aa40916f02a293dd35b4f978efe8f4dcec8fe90e18f8c151",
   "sparse_io_equivalence": {
     "reference_pairs": 284,
     "clean_max_abs_error": 0.0,

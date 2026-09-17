@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import sys
 import time
@@ -97,14 +96,6 @@ def build_crm(checkpoint: Path, device: torch.device, args: argparse.Namespace):
         retirement_horizon=args.retirement_horizon,
     )
     return model.to(device).eval().requires_grad_(False), memory
-
-
-def sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
 
 
 def ordered_files(noisy_dir: Path, manifest: Path | None) -> list[Path]:
@@ -225,12 +216,8 @@ def main() -> None:
         "merge_threshold": args.merge_threshold,
         "retirement_horizon": args.retirement_horizon,
         "stream_order_manifest": str(args.stream_order_manifest) if args.stream_order_manifest else None,
-        "stream_order_manifest_sha256": sha256(args.stream_order_manifest) if args.stream_order_manifest else None,
         "cmgan_checkpoint": str(args.cmgan_checkpoint),
-        "cmgan_checkpoint_sha256": sha256(args.cmgan_checkpoint),
         "crm_checkpoint": str(args.crm_checkpoint),
-        "crm_checkpoint_sha256": sha256(args.crm_checkpoint),
-        "benchmark_script_sha256": sha256(Path(__file__).resolve()),
         "files_timed": len(files) - args.warmup_files,
         "audio_seconds": audio_seconds,
         "source_seconds": source_seconds,

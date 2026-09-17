@@ -3,18 +3,14 @@ from __future__ import annotations
 
 import argparse
 import csv
-import hashlib
 import json
 import math
 import os
-from collections import Counter, defaultdict
+from collections import Counter
 from pathlib import Path
 
 
-EARS_BENCHMARK_V1_COMMIT = "97020e6"
-EARS_BENCHMARK_V1_GENERATOR_SHA256 = (
-    "7b863b756331cf95aa40916f02a293dd35b4f978efe8f4dcec8fe90e18f8c151"
-)
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def parse_args() -> argparse.Namespace:
@@ -31,7 +27,11 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--out-dir", type=Path, required=True)
     parser.add_argument("--train-size", type=int, default=8192)
-    parser.add_argument("--seed", type=int, default=1337)
+    parser.add_argument(
+        "--selection-manifest",
+        type=Path,
+        default=ROOT / "data/manifests/training/subset_manifest.json",
+    )
     parser.add_argument("--overwrite-links", action="store_true")
     return parser.parse_args()
 
@@ -60,10 +60,6 @@ def snr_bin(snr_db: float) -> str:
     return f"[{lower:g},{upper:g})"
 
 
-def stable_digest(seed: int, value: str) -> str:
-    return hashlib.sha256(f"{seed}:{value}".encode("utf-8")).hexdigest()
-
-
 def load_split(root: Path, split: str) -> list[dict]:
     csv_path = root / f"{split}.csv"
     with csv_path.open(newline="", encoding="utf-8") as handle:
@@ -87,57 +83,44 @@ def load_split(root: Path, split: str) -> list[dict]:
     return rows
 
 
-def allocate_proportional_quotas(
-    strata: dict[tuple[str, str, str], list[dict]], target: int
-) -> dict[tuple[str, str, str], int]:
-    total = sum(len(rows) for rows in strata.values())
-    if target <= 0 or target > total:
-        raise ValueError(f"train-size must be in [1, {total}], got {target}")
-    exact = {key: target * len(rows) / total for key, rows in strata.items()}
-    quotas = {key: int(math.floor(value)) for key, value in exact.items()}
-    remaining = target - sum(quotas.values())
-    order = sorted(
-        strata,
-        key=lambda key: (exact[key] - quotas[key], len(strata[key]), key),
-        reverse=True,
-    )
-    for key in order[:remaining]:
-        quotas[key] += 1
-    assert sum(quotas.values()) == target
-    return quotas
+def load_fixed_selection(path: Path) -> list[dict]:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    rows = payload.get("rows", [])
+    if not rows:
+        raise ValueError(f"selection manifest contains no rows: {path}")
+    return rows
 
 
-def select_train_rows(rows: list[dict], target: int, seed: int) -> list[dict]:
-    strata: dict[tuple[str, str, str], list[dict]] = defaultdict(list)
-    for row in rows:
-        key = (row["speaker"], speech_style(row["speech_file"]), snr_bin(row["snr_db"]))
-        strata[key].append(row)
-    quotas = allocate_proportional_quotas(strata, target)
-
-    noise_counts: Counter[str] = Counter()
-    selected: list[dict] = []
-    stratum_order = sorted(
-        strata,
-        key=lambda key: (-quotas[key], stable_digest(seed, "|".join(key))),
-    )
-    for key in stratum_order:
-        candidates = list(strata[key])
-        for _ in range(quotas[key]):
-            candidates.sort(
-                key=lambda row: (
-                    noise_counts[row["noise_file"]],
-                    stable_digest(seed, f'{row["split"]}|{row["speaker"]}|{row["id"]}'),
+def select_fixed_rows(
+    source_rows: list[dict], fixed_rows: list[dict], training_role: str
+) -> list[dict]:
+    source = {}
+    for row in source_rows:
+        key = (row["split"], row["speaker"], str(row["id"]))
+        if key in source:
+            raise RuntimeError(f"duplicate EARS-WHAM source row: {key}")
+        source[key] = row
+    selected = []
+    seen = set()
+    for fixed in fixed_rows:
+        if fixed["training_role"] != training_role:
+            continue
+        key = (fixed["split"], fixed["speaker"], str(fixed["id"]))
+        if key in seen:
+            raise RuntimeError(f"duplicate fixed EARS-WHAM row: {key}")
+        seen.add(key)
+        if key not in source:
+            raise RuntimeError(f"fixed EARS-WHAM row is unavailable: {key}")
+        row = dict(source[key])
+        for field in ("speech_file", "speech_start", "speech_end", "noise_file"):
+            if str(row[field]) != str(fixed[field]):
+                raise RuntimeError(
+                    f"fixed EARS-WHAM row differs at {key} field {field}: "
+                    f"{row[field]} != {fixed[field]}"
                 )
-            )
-            chosen = candidates.pop(0)
-            selected.append(chosen)
-            noise_counts[chosen["noise_file"]] += 1
-    return sorted(selected, key=lambda row: (row["speaker"], int(row["id"])))
-
-
-def sample_id(row: dict, seed: int) -> str:
-    identity = f'{row["split"]}|{row["speaker"]}|{row["id"]}'
-    return f'{row["speaker"]}_{stable_digest(seed, identity)[:16]}.wav'
+        row["sample_id"] = fixed["sample_id"]
+        selected.append(row)
+    return selected
 
 
 def ensure_link(link: Path, target: Path, overwrite: bool) -> None:
@@ -172,8 +155,15 @@ def summarize(rows: list[dict]) -> dict:
 def main() -> None:
     args = parse_args()
     train_pool = load_split(args.ears_wham_root, "train")
-    validation_rows = load_split(args.ears_wham_root, "valid")
-    selected_train = select_train_rows(train_pool, args.train_size, args.seed)
+    validation_pool = load_split(args.ears_wham_root, "valid")
+    fixed_rows = load_fixed_selection(args.selection_manifest)
+    selected_train = select_fixed_rows(train_pool, fixed_rows, "train")
+    validation_rows = select_fixed_rows(validation_pool, fixed_rows, "validation")
+    if len(selected_train) != args.train_size:
+        raise RuntimeError(
+            f"fixed selection has {len(selected_train)} training rows, "
+            f"not requested {args.train_size}"
+        )
 
     clean_dir = args.out_dir / "clean"
     noisy_dir = args.out_dir / "noisy"
@@ -185,7 +175,7 @@ def main() -> None:
     metadata_lines = []
     seen_ids: set[str] = set()
     for row in selected_train + validation_rows:
-        identifier = sample_id(row, args.seed)
+        identifier = row["sample_id"]
         if identifier in seen_ids:
             raise RuntimeError(f"sample-id collision: {identifier}")
         seen_ids.add(identifier)
@@ -194,7 +184,7 @@ def main() -> None:
         public_row = {
             key: value
             for key, value in row.items()
-            if key not in {"clean_path", "noisy_path"}
+            if key not in {"clean_path", "noisy_path", "sample_id"}
         }
         output_rows.append(
             {
@@ -218,14 +208,9 @@ def main() -> None:
     audit = {
         "description": "SETTA-aligned EARS-WHAM v1 source-only adapter subset",
         "ears_benchmark_repository": "https://github.com/sp-uhh/ears_benchmark",
-        "ears_benchmark_commit": EARS_BENCHMARK_V1_COMMIT,
-        "generator_sha256": EARS_BENCHMARK_V1_GENERATOR_SHA256,
         "ears_wham_root": str(args.ears_wham_root.resolve()),
-        "selection_seed": args.seed,
-        "selection_strategy": (
-            "proportional speaker x speech_style x 5dB_SNR_bin strata; "
-            "within-stratum greedy WHAM recording diversity"
-        ),
+        "selection_manifest": str(args.selection_manifest.resolve()),
+        "selection_strategy": "exact identities from the repository's fixed selection metadata",
         "requested_train_size": args.train_size,
         "train_pool": summarize(train_pool),
         "selected_train": summarize(selected_train),

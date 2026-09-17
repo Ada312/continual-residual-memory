@@ -8,7 +8,7 @@
 Continual Residual Memory (CRM) is a gradient-free continual test-time adaptation framework for speech enhancement. It selectively recovers useful information from the residual discarded by a frozen enhancement backbone and refines the recovery using causal prototype memory from preceding utterances. During deployment, model parameters remain fixed while the memory state is updated online.
 
 <p align="center">
-  <img src="docs/assets/crm_overview.png" alt="Overview of Continual Residual Memory" width="100%">
+  <img src="assets/crm_overview.png" alt="Overview of Continual Residual Memory" width="100%">
 </p>
 <p align="center"><em>Overview of Continual Residual Memory (CRM).</em></p>
 
@@ -25,16 +25,11 @@ pip install -r requirements.txt
 
 ## Checkpoints
 
-CRM uses the pretrained CMGAN checkpoint released by [SETTA](https://github.com/tobiaaa/SETTA). Download [`cmgan_ears.th`](https://raw.githubusercontent.com/tobiaaa/SETTA/main/checkpoints/cmgan_ears.th) and place it at:
+The pretrained CMGAN checkpoint released by [SETTA](https://github.com/tobiaaa/SETTA) and the released CRM checkpoints are included:
 
-```text
-checkpoints/external/cmgan_ears.th
-```
-
-The released CRM checkpoints are included:
-
-| Stage | Checkpoint |
+| Component | Checkpoint |
 | --- | --- |
+| Frozen CMGAN backbone | `checkpoints/external/cmgan_ears.th` |
 | Utterance-Local Residual Recovery | `checkpoints/crm/static_best.th` |
 | Memory-Conditioned Refinement | `checkpoints/crm/dynamic_best.th` |
 
@@ -52,7 +47,7 @@ python data/prepare_ears_wham_from_benchmark.py \
   --out-dir "$DATA_ROOT/ears_wham"
 ```
 
-See [`docs/DATA.md`](docs/DATA.md) for dataset sources, target-set construction, expected directory layouts, and fixed manifests.
+See [`data/README.md`](data/README.md) for dataset sources, target-set construction, expected directory layouts, and fixed manifests.
 
 ## Training
 
@@ -114,7 +109,7 @@ python metrics/evaluate.py \
   --denoised-dir outputs/dns/crm/wav \
   --out-dir outputs/dns/crm/metrics \
   --method crm \
-  --references manifests/dns.csv \
+  --references data/manifests/dns.csv \
   --fs 16000
 ```
 
@@ -136,4 +131,4 @@ If you find this work useful, please cite:
 
 ## License
 
-Project code is released under [GPL-3.0](LICENSE). Third-party components and protocol metadata remain subject to their respective terms; see [`THIRD_PARTY.md`](THIRD_PARTY.md) and [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
+Project code is released under [GPL-3.0](LICENSE). Third-party components and protocol metadata remain subject to their respective terms; see [`THIRD_PARTY.md`](THIRD_PARTY.md).

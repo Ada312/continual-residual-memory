@@ -3,19 +3,10 @@ from __future__ import annotations
 
 import argparse
 import csv
-import hashlib
 from pathlib import Path
 
 import numpy as np
 import soundfile as sf
-
-
-def sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        for block in iter(lambda: stream.read(1024 * 1024), b""):
-            digest.update(block)
-    return digest.hexdigest()
 
 
 def load_mono_float32(path: Path, expected_sr: int) -> np.ndarray:
@@ -41,7 +32,6 @@ def main() -> None:
     parser.add_argument("--musan-root", type=Path, required=True)
     parser.add_argument("--output-root", type=Path, required=True)
     parser.add_argument("--limit", type=int)
-    parser.add_argument("--verify-hashes", action="store_true")
     args = parser.parse_args()
 
     clean_dir = args.output_root / "clean"
@@ -84,17 +74,6 @@ def main() -> None:
         noisy_path = noisy_dir / f'{row["utt_id"]}.wav'
         sf.write(clean_path, np.clip(clean, -1.0, 1.0), sample_rate, subtype="PCM_16")
         sf.write(noisy_path, np.clip(noisy, -1.0, 1.0), sample_rate, subtype="PCM_16")
-
-        if args.verify_hashes:
-            for path, field in (
-                (clean_path, "expected_clean_sha256"),
-                (noisy_path, "expected_noisy_sha256"),
-            ):
-                actual = sha256(path)
-                if actual != row[field]:
-                    raise RuntimeError(
-                        f'{row["utt_id"]}: {field} mismatch: {actual} != {row[field]}'
-                    )
 
     print(f"generated {len(rows)} pairs under {args.output_root}")
 

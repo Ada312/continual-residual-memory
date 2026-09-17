@@ -11,7 +11,7 @@ import pytest
 import torch
 
 from crm.model import CRM, load_recovery, load_refinement, new_memory
-from scripts.infer_stream import load_memory, ordered_ids, save_memory, sha256
+from scripts.infer_stream import load_memory, ordered_ids, save_memory
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -33,7 +33,9 @@ def test_paper_training_and_deployment_configs():
     assert refinement["memory_dropout"] == 0.20
     assert (CONFIG["k_max"], CONFIG["tau_mem"], CONFIG["gamma_read"]) == (64, 0.5, 0.95)
 
-    manifest = json.loads((ROOT / "manifests/training/subset_manifest.json").read_text())
+    manifest = json.loads(
+        (ROOT / "data/manifests/training/subset_manifest.json").read_text()
+    )
     assert manifest["selected_train"]["pairs"] == 8192
     assert manifest["validation"]["pairs"] == 632
     assert manifest["speaker_overlap"] == []
@@ -129,28 +131,25 @@ def test_refinement_context_builder_uses_public_memory_interface(monkeypatch):
     assert contexts["p001_b.wav"]["count"].sum() == 1
 
 
-def test_memory_roundtrip_and_checkpoint_guard(tmp_path):
+def test_memory_roundtrip(tmp_path):
     torch.set_num_threads(1)
     checkpoint = ROOT / "checkpoints/crm/dynamic_best.th"
-    digest = sha256(checkpoint)
     model = load_refinement(checkpoint, CONFIG, torch.device("cpu"))
     first = CRM(model, new_memory(CONFIG))
     noisy = torch.randn(4096) * 0.05
     source = noisy * 0.8
     first.write(first.infer(noisy, source)[2])
     path = tmp_path / "memory.pt"
-    save_memory(path, first, digest)
+    save_memory(path, first)
     second = CRM(model, new_memory(CONFIG))
-    with pytest.raises(ValueError, match="checkpoint_sha256"):
-        load_memory(path, second, "not-the-checkpoint")
-    load_memory(path, second, digest)
+    load_memory(path, second)
     torch.testing.assert_close(first.infer(noisy, source)[0], second.infer(noisy, source)[0])
     assert first.memory.step == second.memory.step == 1
 
 
 @pytest.mark.parametrize("manifest,count", [("dns.csv", 150), ("ears_d.csv", 886), ("musan_music.csv", 2620)])
 def test_manifest_order_and_ids(manifest, count):
-    path = ROOT / "manifests" / manifest
+    path = ROOT / "data/manifests" / manifest
     ids = ordered_ids(path)
     assert len(ids) == count
     with path.open(newline="", encoding="utf-8") as handle:

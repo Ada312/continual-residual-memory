@@ -17,7 +17,7 @@ CONDITIONS = {"Matched history": "matched_dns", "Cross-domain history": "musan_t
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--paired", type=Path, default=ROOT / "results/transition/dns_all_methods_paired.csv")
-    parser.add_argument("--manifest", type=Path, default=ROOT / "manifests/dns.csv")
+    parser.add_argument("--manifest", type=Path, default=ROOT / "data/manifests/dns.csv")
     parser.add_argument("--switch-csv", type=Path, help="Optional newly evaluated CRM cross-domain per-file metrics")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()

@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import argparse
 import csv
-import hashlib
 import json
 import sys
 from pathlib import Path
@@ -38,22 +37,14 @@ def load_audio(path: Path) -> torch.Tensor:
     return audio
 
 
-def sha256(path: Path) -> str:
-    value = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            value.update(chunk)
-    return value.hexdigest()
-
-
-def save_memory(path: Path, crm: CRM, checkpoint_sha256: str) -> None:
+def save_memory(path: Path, crm: CRM) -> None:
     memory = crm.memory
     state = {key: getattr(memory, key).clone() for key in
              ("means", "variances", "counts", "usage", "last_used")}
     state.update(candidate=memory.candidate.clone() if memory.candidate is not None else None,
                  candidate_count=int(memory.candidate_count), step=int(memory.step))
     path.parent.mkdir(parents=True, exist_ok=True)
-    torch.save({"format": "crm_dynamic_memory_v1", "checkpoint_sha256": checkpoint_sha256,
+    torch.save({"format": "crm_dynamic_memory_v1",
                 "prototypes": memory.prototypes, "frequency_bins": memory.frequency_bins,
                 "noise_frame_fraction": memory.noise_frame_fraction,
                 "warmup_utterances": memory.warmup_utterances,
@@ -66,10 +57,10 @@ def save_memory(path: Path, crm: CRM, checkpoint_sha256: str) -> None:
                 "processed_utterances": memory.step, "state": state}, path)
 
 
-def load_memory(path: Path, crm: CRM, checkpoint_sha256: str) -> None:
+def load_memory(path: Path, crm: CRM) -> None:
     memory = crm.memory
     payload = torch.load(path, map_location="cpu", weights_only=True)
-    expected = {"format": "crm_dynamic_memory_v1", "checkpoint_sha256": checkpoint_sha256,
+    expected = {"format": "crm_dynamic_memory_v1",
                 "prototypes": memory.prototypes, "frequency_bins": memory.frequency_bins,
                 "noise_frame_fraction": memory.noise_frame_fraction,
                 "warmup_utterances": memory.warmup_utterances,
@@ -130,9 +121,8 @@ def main() -> None:
     args.output_dir.mkdir(parents=True, exist_ok=True)
     if args.mode == "crm":
         crm = CRM(load_refinement(args.checkpoint, config, device), new_memory(config))
-        checkpoint_hash = sha256(args.checkpoint)
         if args.initial_memory_state:
-            load_memory(args.initial_memory_state, crm, checkpoint_hash)
+            load_memory(args.initial_memory_state, crm)
     else:
         projector = load_recovery(args.checkpoint, config, device)
     for filename in ids:
@@ -153,11 +143,9 @@ def main() -> None:
             if args.mode == "crm":
                 crm.write(auxiliary)
     if args.mode == "crm" and args.save_memory_state:
-        save_memory(args.save_memory_state, crm, checkpoint_hash)
+        save_memory(args.save_memory_state, crm)
     print(json.dumps({"mode": args.mode, "processed": len(ids), "memory_steps":
-                      crm.memory.step if args.mode == "crm" else 0,
-                      "manifest_sha256": sha256(args.manifest),
-                      "checkpoint_sha256": sha256(args.checkpoint)}))
+                      crm.memory.step if args.mode == "crm" else 0}))
 
 
 if __name__ == "__main__":

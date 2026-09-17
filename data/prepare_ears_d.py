@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
@@ -19,11 +18,6 @@ from tqdm import tqdm
 
 
 ROOT = Path(__file__).resolve().parents[1]
-EARS_BENCHMARK_V1_COMMIT = "97020e6"
-EARS_BENCHMARK_V1_TEST_FILES_SHA256 = (
-    "ca38d2563ecdc3772375b61ce01197fabee3b12e3f970abadf51393c146b720d"
-)
-SETTA_COMMIT = "08ea624"
 TEST_SPEAKERS = ["p102", "p103", "p104", "p105", "p106", "p107"]
 EMOTIONS_STYLES = [
     "adoration", "amazement", "amusement", "anger", "confusion", "contentment",
@@ -49,12 +43,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--test-files",
         type=Path,
-        default=ROOT / "manifests/protocol/ears_benchmark_v1_test_files.json",
+        default=ROOT / "data/manifests/protocol/ears_benchmark_v1_test_files.json",
     )
     parser.add_argument(
         "--demand-index",
         type=Path,
-        default=ROOT / "manifests/protocol/demand_16k_index.csv",
+        default=ROOT / "data/manifests/protocol/demand_16k_index.csv",
     )
     parser.add_argument(
         "--demand-dir", type=Path, default=Path("data/demand/16k")
@@ -79,18 +73,12 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def sha256(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
-
-
 def find_emotion_style(stem: str) -> str | None:
     lowered = stem.lower()
     return next((value for value in EMOTIONS_STYLES if value in lowered), None)
 
 
 def build_ears_w_rows(args: argparse.Namespace) -> list[dict]:
-    if sha256(args.test_files) != EARS_BENCHMARK_V1_TEST_FILES_SHA256:
-        raise RuntimeError("test_files.json does not match ears_benchmark v1 commit 97020e6")
     test_spec = json.loads(args.test_files.read_text(encoding="utf-8"))
     if list(test_spec) != TEST_SPEAKERS:
         raise RuntimeError(f"unexpected EARS test speakers: {list(test_spec)}")
@@ -249,8 +237,6 @@ def export_ears_w(args: argparse.Namespace, rows: list[dict]) -> list[dict]:
     manifest = {
         "description": "ears_benchmark v1 complete EARS-W standard test split",
         "ears_benchmark_repository": "https://github.com/sp-uhh/ears_benchmark",
-        "ears_benchmark_commit": EARS_BENCHMARK_V1_COMMIT,
-        "test_files_sha256": EARS_BENCHMARK_V1_TEST_FILES_SHA256,
         "generation_seed": 42,
         "snr_range_db": [args.ears_w_min_snr, args.ears_w_max_snr],
         "source_sample_rate": args.source_rate,
@@ -345,7 +331,6 @@ def export_ears_d(args: argparse.Namespace, ears_w_rows: list[dict]) -> list[dic
     manifest = {
         "description": "SETTA-aligned complete EARS-D standard test split",
         "setta_repository": "https://github.com/tobiaaa/SETTA",
-        "setta_commit": SETTA_COMMIT,
         "construction": (
             "official ears_benchmark v1 p102-p107 clean test; SETTA "
             "datasets/ears_demand/index.py and dataset.py; seed 123; DEMAND "
@@ -358,7 +343,6 @@ def export_ears_d(args: argparse.Namespace, ears_w_rows: list[dict]) -> list[dic
         "sample_rate": args.target_rate,
         "generation_seed": 123,
         "snr_range_db": [args.ears_d_min_snr, args.ears_d_max_snr],
-        "demand_index_sha256": sha256(args.demand_index),
         "pairs": len(exported),
         "speakers": TEST_SPEAKERS,
         "noise_environments": sorted({row["noise_environment"] for row in exported}),

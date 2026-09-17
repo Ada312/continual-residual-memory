@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 from pathlib import Path
 
@@ -19,14 +18,6 @@ METRICS = {
     "SSNR": "SSNR",
     "SISDR": "SISDR",
 }
-
-
-def sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
 
 
 def main() -> None:
@@ -83,13 +74,9 @@ def main() -> None:
         "seed": args.seed,
         "iterations": args.iterations,
         "static_csv": str(args.static),
-        "static_csv_sha256": sha256(args.static),
         "dynamic_csv": str(args.dynamic),
-        "dynamic_csv_sha256": sha256(args.dynamic),
         "paired_csv": str(paired_path),
-        "paired_csv_sha256": sha256(paired_path),
         "script": str(Path(__file__).resolve()),
-        "script_sha256": sha256(Path(__file__).resolve()),
     }
     (args.output / "bootstrap_metadata.json").write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
     print(pd.DataFrame(rows).to_string(index=False))
