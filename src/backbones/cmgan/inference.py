@@ -3,15 +3,12 @@ from __future__ import annotations
 
 import argparse
 import os
-import sys
 from pathlib import Path
 
 import torch
 import torchaudio
 from omegaconf import OmegaConf
 from tqdm import tqdm
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from backbones.cmgan.transform_util import get_transforms
 from backbones.cmgan import model as _cmgan_registration  # noqa: F401 - registry side effect

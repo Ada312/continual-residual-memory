@@ -4,7 +4,6 @@ from __future__ import annotations
 import argparse
 import os
 import signal
-import sys
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from types import SimpleNamespace
@@ -14,15 +13,11 @@ import torch
 import torchaudio
 from tqdm import tqdm
 
-ROOT = Path(__file__).resolve().parents[1]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
-
-from metrics._frozen.composite import Composite
-from metrics._frozen.pesq import PESQ
-from metrics._frozen.sisdr import SISDR
-from metrics._frozen.ssnr import SSNR
-from metrics._frozen.stoi import STOI
+from _frozen.composite import Composite
+from _frozen.pesq import PESQ
+from _frozen.sisdr import SISDR
+from _frozen.ssnr import SSNR
+from _frozen.stoi import STOI
 
 
 _WORKER_METRICS = None

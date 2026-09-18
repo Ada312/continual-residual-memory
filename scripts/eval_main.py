@@ -33,7 +33,7 @@ def main() -> None:
     args = parser.parse_args()
     manifest = ROOT / "data/manifests" / MANIFESTS[args.dataset]
     source = args.output_dir / "backbone/wav"
-    run([sys.executable, "backbones/cmgan/inference.py", "--noisy-dir", str(args.noisy_dir),
+    run([sys.executable, "src/backbones/cmgan/inference.py", "--noisy-dir", str(args.noisy_dir),
          "--output-dir", str(source), "--checkpoint", str(args.cmgan_checkpoint),
          "--sample-rate", "16000", "--overwrite"], args.dry_run)
     for mode, checkpoint, subdir in (

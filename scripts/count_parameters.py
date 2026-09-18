@@ -3,16 +3,11 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 from pathlib import Path
 
 import torch
 
-ROOT = Path(__file__).resolve().parents[1]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
-
-from scripts.measure_rtf import build_cmgan, build_crm
+from measure_rtf import build_cmgan, build_crm
 
 
 def count(module: torch.nn.Module) -> int:

@@ -9,15 +9,11 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
-
 import torch
 from torch.utils.flop_counter import FlopCounterMode, flop_registry
 from tqdm import tqdm
 
-from scripts.measure_rtf import (
+from measure_rtf import (
     build_cmgan,
     build_crm,
     build_transform,

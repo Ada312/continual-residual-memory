@@ -6,16 +6,14 @@ from __future__ import annotations
 import argparse
 import csv
 import json
-import sys
 from pathlib import Path
-
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
 
 import torch
 import torchaudio
 
 from crm.model import CRM, load_recovery, load_refinement, new_memory, read_config
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def ordered_ids(manifest: Path) -> list[str]:

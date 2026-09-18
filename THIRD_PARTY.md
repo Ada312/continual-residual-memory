@@ -41,8 +41,8 @@ Source: [tobiaaa/SETTA](https://github.com/tobiaaa/SETTA).
 
 Covered paths:
 
-- `backbones/registry.py`
-- `backbones/cmgan/`
+- `src/backbones/registry.py`
+- `src/backbones/cmgan/`
 - `metrics/_frozen/`
 
 The CMGAN model/transforms and frozen evaluator were extracted from SETTA.
@@ -56,7 +56,7 @@ SETTA is licensed under GNU GPL version 3. A complete copy is provided in
 
 ## CMGAN
 
-The SETTA-derived files under `backbones/cmgan/` implement CMGAN, originally
+The SETTA-derived files under `src/backbones/cmgan/` implement CMGAN, originally
 published at [ruizhecao96/CMGAN](https://github.com/ruizhecao96/CMGAN).
 
 MIT License
@@ -83,7 +83,7 @@ SOFTWARE.
 
 ## Conformer Implementation
 
-`backbones/cmgan/modules.py` retains a Conformer implementation attributed by
+`src/backbones/cmgan/modules.py` retains a Conformer implementation attributed by
 SETTA/CMGAN to [lucidrains/conformer](https://github.com/lucidrains/conformer).
 
 MIT License
