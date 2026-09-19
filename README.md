@@ -2,6 +2,7 @@
 
 [![Python 3.9](https://img.shields.io/badge/Python-3.9-3776AB.svg)](requirements.txt)
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
+[![Audio Demo](https://img.shields.io/badge/Audio-Demo-71867a.svg)](https://ada312.github.io/continual-residual-memory/)
 
 *Gradient-free continual test-time adaptation for speech enhancement through residual recovery and causal memory.*
 
@@ -10,7 +11,7 @@
 Continual Residual Memory (CRM) is a gradient-free continual test-time adaptation framework for speech enhancement. It selectively recovers useful information from the residual discarded by a frozen enhancement backbone and refines the recovery using causal prototype memory from preceding utterances. During deployment, model parameters remain fixed while the memory state is updated online.
 
 <p align="center">
-  <img src="assets/crm_overview.png" alt="Overview of Continual Residual Memory" width="100%">
+  <img src="docs/static/images/crm_overview.png" alt="Overview of Continual Residual Memory" width="100%">
 </p>
 <p align="center"><em>Overview of Continual Residual Memory (CRM).</em></p>
 
