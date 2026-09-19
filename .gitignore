@@ -17,5 +17,4 @@ logs/
 wandb/
 slurm-*.out
 *.wav
-!docs/static/audio/*.wav
 *.flac
