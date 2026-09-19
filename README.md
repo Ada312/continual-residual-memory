@@ -6,7 +6,7 @@
 
 *Gradient-free continual test-time adaptation for speech enhancement through residual recovery and causal memory.*
 
-## 📖 Introduction
+## Introduction
 
 Continual Residual Memory (CRM) is a gradient-free continual test-time adaptation framework for speech enhancement. It selectively recovers useful information from the residual discarded by a frozen enhancement backbone and refines the recovery using causal prototype memory from preceding utterances. During deployment, model parameters remain fixed while the memory state is updated online.
 
@@ -15,7 +15,7 @@ Continual Residual Memory (CRM) is a gradient-free continual test-time adaptatio
 </p>
 <p align="center"><em>Overview of Continual Residual Memory (CRM).</em></p>
 
-## ⚙️ Installation
+## Installation
 
 ```bash
 git clone https://github.com/Ada312/continual-residual-memory.git
@@ -27,7 +27,7 @@ pip install -r requirements.txt
 pip install -e .
 ```
 
-## 📦 Checkpoints
+## Checkpoints
 
 The pretrained CMGAN checkpoint released by [SETTA](https://github.com/tobiaaa/SETTA) and the released CRM checkpoints are included:
 
@@ -37,7 +37,7 @@ The pretrained CMGAN checkpoint released by [SETTA](https://github.com/tobiaaa/S
 | Utterance-Local Residual Recovery | `checkpoints/crm/static_best.th` |
 | Memory-Conditioned Refinement | `checkpoints/crm/dynamic_best.th` |
 
-## 🏋️ Training
+## Training
 
 ### Data Preparation
 
@@ -89,7 +89,7 @@ python scripts/train_refinement.py \
   --output-dir outputs/train_refinement
 ```
 
-## 🚀 Inference
+## Inference
 
 Enhance a target-domain stream with the released CRM checkpoints:
 
@@ -108,7 +108,7 @@ The same entry supports `dns`, `ears_d`, and `libri_musan`. Each dataset is proc
 
 Users who retrain CRM can replace the released checkpoints with `outputs/train_recovery/best.th` and `outputs/train_refinement/best.th`.
 
-## 📊 Evaluation
+## Evaluation
 
 Evaluate an enhanced-waveform directory with the seven supported speech-enhancement metrics:
 
@@ -123,11 +123,11 @@ python metrics/evaluate.py \
   --fs 16000
 ```
 
-## 🙏 Acknowledgements
+## Acknowledgements
 
 We thank the authors of [SETTA](https://github.com/tobiaaa/SETTA) for releasing the pretrained CMGAN checkpoint and compatibility implementation, and the authors of [CMGAN](https://github.com/ruizhecao96/CMGAN) for the speech-enhancement backbone.
 
-## 📝 Citation
+## Citation
 
 If you find this work useful, please cite:
 
@@ -139,6 +139,6 @@ If you find this work useful, please cite:
 }
 ```
 
-## 📜 License
+## License
 
 Project code is released under [GPL-3.0](LICENSE). Third-party components and protocol metadata remain subject to their respective terms; see [`THIRD_PARTY.md`](THIRD_PARTY.md).
