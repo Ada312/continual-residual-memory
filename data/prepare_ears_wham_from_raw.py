@@ -3,410 +3,474 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
+import shutil
 from collections import Counter, defaultdict
 from concurrent.futures import ThreadPoolExecutor
-from glob import glob
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pyloudnorm as pyln
 import soundfile as sf
 from tqdm import tqdm
 
-try:
-    from data.prepare_ears_wham_from_benchmark import (
-        load_fixed_selection,
-        select_fixed_rows,
-        snr_bin,
-        speech_style,
-    )
-except ModuleNotFoundError:
-    from prepare_ears_wham_from_benchmark import (
-        load_fixed_selection,
-        select_fixed_rows,
-        snr_bin,
-        speech_style,
-    )
 
-
-VERIFIED_REFERENCE_PAIRS = 284
 ROOT = Path(__file__).resolve().parents[1]
+PAPER_SAMPLE_RATE = 48_000
+EXPECTED_TRAIN = 8_192
+EXPECTED_VALIDATION = 632
+EXPECTED_VALIDATION_SPEAKERS = {"p100", "p101"}
+REQUIRED_FIELDS = {
+    "sample_id",
+    "training_role",
+    "final_snr_db",
+    "noise_gain",
+    "split",
+    "speaker",
+    "speech_file",
+    "speech_start",
+    "speech_end",
+    "noise_file",
+    "noise_channel",
+    "noise_base_start",
+    "noise_start",
+    "noise_end",
+    "snr_dB",
+    "snr_db",
+    "duration_frames",
+}
+
+
+@dataclass(frozen=True)
+class AudioInfo:
+    frames: int
+    sample_rate: int
+    channels: int
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Build a sparse but sample-exact EARS-WHAM v1 source training view. "
-            "Unselected rows advance the official RNG without mixing or writing audio."
+            "Deterministically reconstruct the paper EARS-WHAM training and "
+            "held-out data from raw EARS, WHAM 48 kHz, and the fixed manifest."
         )
     )
-    parser.add_argument("--ears-dir", type=Path, default=Path("data/ears_raw"))
     parser.add_argument(
-        "--wham-dir", type=Path, default=Path("data/high_res_wham/audio")
+        "--ears-dir",
+        type=Path,
+        required=True,
+        help="EARS root containing one directory per speaker, e.g. p001/.",
+    )
+    parser.add_argument(
+        "--wham-dir",
+        type=Path,
+        required=True,
+        help="WHAM 48 kHz directory containing the referenced WAV files.",
     )
     parser.add_argument("--out-dir", type=Path, required=True)
-    parser.add_argument("--train-size", type=int, default=8192)
     parser.add_argument(
         "--selection-manifest",
         type=Path,
         default=ROOT / "data/manifests/training/subset_manifest.json",
     )
-    parser.add_argument("--generation-seed", type=int, default=42)
-    parser.add_argument("--sample-rate", type=int, default=48_000)
-    parser.add_argument("--min-snr", type=float, default=-2.5)
-    parser.add_argument("--max-snr", type=float, default=17.5)
-    parser.add_argument("--min-length", type=float, default=4.0)
-    parser.add_argument("--cut-length", type=float, default=10.0)
-    parser.add_argument(
-        "--metadata-cache",
-        type=Path,
-        default=Path("data/ears_benchmark_v1_audio_metadata.json"),
-    )
-    parser.add_argument("--metadata-workers", type=int, default=32)
-    parser.add_argument("--mix-workers", type=int, default=8)
+    parser.add_argument("--workers", type=int, default=8)
     return parser.parse_args()
 
 
-def segment_bounds(length: int, min_length: int, cut_length: int) -> list[tuple[int, int]]:
-    if length >= cut_length + min_length:
-        count = int((length - min_length) / cut_length) + 1
-        return [
-            *((index * cut_length, (index + 1) * cut_length) for index in range(count - 1)),
-            ((count - 1) * cut_length, -1),
-        ]
-    return [(0, -1)]
+def load_manifest(path: Path) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    if not path.is_file():
+        raise FileNotFoundError(f"fixed selection manifest not found: {path}")
+    document = json.loads(path.read_text(encoding="utf-8"))
+    rows = document.get("rows")
+    if not isinstance(rows, list):
+        raise ValueError(f"manifest has no row list: {path}")
+    return document, rows
 
 
-def simulate_split(
-    split: str,
-    speakers: list[str],
-    ears_dir: Path,
-    noise_files: list[str],
-    audio_info: dict[str, dict[str, int]],
-    sample_rate: int,
-    min_snr: float,
-    max_snr: float,
-    min_length: int,
-    cut_length: int,
-) -> list[dict]:
-    hold_out_styles = {"interjection", "melodic", "nonverbal", "vegetative"}
-    speech_files: list[str] = []
-    for speaker in speakers:
-        speech_files.extend(sorted(glob(str(ears_dir / speaker / "*.wav"))))
-    speech_files = [
-        path
-        for path in speech_files
-        if Path(path).name.split("_")[0] not in hold_out_styles
+def audio_info(path: Path) -> AudioInfo:
+    info = sf.info(path)
+    return AudioInfo(
+        frames=int(info.frames),
+        sample_rate=int(info.samplerate),
+        channels=int(info.channels),
+    )
+
+
+def paper_compatible_slice(waveform: np.ndarray, start: int, end: int) -> np.ndarray:
+    if end == -1:
+        # The dataset used for the paper applied Python's [start:-1] slice for
+        # final/unsplit segments. Preserve that one-sample omission exactly.
+        return waveform[start:-1]
+    return waveform[start:end]
+
+
+def expected_segment_frames(speech_frames: int, start: int, end: int) -> int:
+    if end == -1:
+        return speech_frames - start - 1
+    return end - start
+
+
+def resolve_inputs(
+    rows: list[dict[str, Any]], ears_dir: Path, wham_dir: Path
+) -> tuple[dict[tuple[str, str], Path], dict[str, Path]]:
+    speech_paths = {
+        (str(row["speaker"]), str(row["speech_file"])): (
+            ears_dir / str(row["speaker"]) / f"{row['speech_file']}.wav"
+        )
+        for row in rows
+    }
+    noise_paths = {
+        str(row["noise_file"]): wham_dir / f"{row['noise_file']}.wav" for row in rows
+    }
+    missing_speech = sorted(
+        str(path) for path in speech_paths.values() if not path.is_file()
+    )
+    missing_noise = sorted(
+        str(path) for path in noise_paths.values() if not path.is_file()
+    )
+    if missing_speech or missing_noise:
+        details = []
+        if missing_speech:
+            details.append(
+                f"missing {len(missing_speech)} EARS files; first: {missing_speech[0]}"
+            )
+        if missing_noise:
+            details.append(
+                f"missing {len(missing_noise)} WHAM files; first: {missing_noise[0]}"
+            )
+        raise FileNotFoundError("; ".join(details))
+    return speech_paths, noise_paths
+
+
+def validate_manifest(rows: list[dict[str, Any]]) -> None:
+    if not rows:
+        raise ValueError("fixed selection manifest is empty")
+
+    missing_fields = [
+        (index, sorted(REQUIRED_FIELDS - set(row)))
+        for index, row in enumerate(rows)
+        if REQUIRED_FIELDS - set(row)
     ]
+    if missing_fields:
+        index, fields = missing_fields[0]
+        raise ValueError(f"manifest row {index} is missing fields: {fields}")
 
-    rows: list[dict] = []
-    output_id = 0
-    for speech_path in tqdm(speech_files, desc=f"simulate {split}"):
-        speech_meta = audio_info[speech_path]
-        if speech_meta["samplerate"] != sample_rate:
+    identifiers = [str(row["sample_id"]) for row in rows]
+    duplicate_ids = sorted(
+        identifier for identifier, count in Counter(identifiers).items() if count > 1
+    )
+    if duplicate_ids:
+        raise ValueError(f"duplicate sample_id in fixed manifest: {duplicate_ids[0]}")
+    if any(
+        Path(identifier).name != identifier or not identifier.endswith(".wav")
+        for identifier in identifiers
+    ):
+        raise ValueError("sample_id values must be plain .wav filenames")
+
+    roles = Counter(str(row["training_role"]) for row in rows)
+    expected_roles = {"train": EXPECTED_TRAIN, "validation": EXPECTED_VALIDATION}
+    if dict(roles) != expected_roles:
+        raise ValueError(f"expected role counts {expected_roles}, got {dict(roles)}")
+
+    expected_splits = {"train": "train", "validation": "valid"}
+    for index, row in enumerate(rows):
+        role = str(row["training_role"])
+        if role not in expected_splits or row["split"] != expected_splits[role]:
             raise ValueError(
-                f'unexpected EARS rate: {speech_path}: {speech_meta["samplerate"]}'
+                f"manifest row {index} has inconsistent role/split: "
+                f"{role!r}/{row['split']!r}"
             )
-        speech_frames = speech_meta["frames"]
-        if speech_frames < min_length:
-            continue
-
-        selected_noise = ""
-        selected_info = None
-        while selected_info is None or selected_info["frames"] < speech_frames:
-            selected_noise = str(np.random.choice(noise_files))
-            selected_info = audio_info[selected_noise]
-        if selected_info["samplerate"] != sample_rate:
+        for key in ("final_snr_db", "noise_gain", "snr_dB", "snr_db"):
+            if not math.isfinite(float(row[key])):
+                raise ValueError(f"manifest row {index} has non-finite {key}")
+        if float(row["noise_gain"]) <= 0.0:
+            raise ValueError(f"manifest row {index} has non-positive noise_gain")
+        initial_snr = float(row["snr_db"])
+        final_snr = float(row["final_snr_db"])
+        if float(row["snr_dB"]) != initial_snr:
             raise ValueError(
-                f'unexpected WHAM rate: {selected_noise}: {selected_info["samplerate"]}'
+                f"manifest row {index} has inconsistent initial SNR fields"
             )
-        channel = int(np.random.randint(0, selected_info["channels"]))
-        base_noise_start = int(
-            np.random.randint(selected_info["frames"] - speech_frames + 1)
+        snr_adjustment = final_snr - initial_snr
+        if snr_adjustment < 0.0 or not math.isclose(
+            snr_adjustment, round(snr_adjustment), abs_tol=1e-9
+        ):
+            raise ValueError(
+                f"manifest row {index} has invalid clipping SNR adjustment"
+            )
+
+    train_speakers = {
+        str(row["speaker"]) for row in rows if row["training_role"] == "train"
+    }
+    validation_speakers = {
+        str(row["speaker"]) for row in rows if row["training_role"] == "validation"
+    }
+    overlap = sorted(train_speakers & validation_speakers)
+    if overlap:
+        raise ValueError(f"train/held-out speaker overlap: {overlap}")
+    if validation_speakers != EXPECTED_VALIDATION_SPEAKERS:
+        raise ValueError(
+            "expected validation speakers "
+            f"{sorted(EXPECTED_VALIDATION_SPEAKERS)}, got {sorted(validation_speakers)}"
         )
-        initial_snr = float(np.round(np.random.uniform(min_snr, max_snr), decimals=1))
-
-        speaker = Path(speech_path).parent.name
-        source_stem = Path(speech_path).stem
-        for start, end in segment_bounds(speech_frames, min_length, cut_length):
-            segment_frames = (end - start) if end >= 0 else (speech_frames - start - 1)
-            rows.append(
-                {
-                    "id": f"{output_id:05d}",
-                    "split": split,
-                    "speaker": speaker,
-                    "speech_file": source_stem,
-                    "speech_path": speech_path,
-                    "speech_start": start,
-                    "speech_end": end,
-                    "noise_file": Path(selected_noise).stem,
-                    "noise_path": selected_noise,
-                    "noise_channel": channel,
-                    "noise_base_start": base_noise_start,
-                    "noise_start": base_noise_start + start,
-                    "noise_end": base_noise_start + start + segment_frames,
-                    "snr_dB": initial_snr,
-                    "snr_db": initial_snr,
-                    "duration_frames": segment_frames,
-                }
-            )
-            output_id += 1
-    return rows
 
 
-def load_audio_info(
-    paths: list[str], cache_path: Path, workers: int
-) -> dict[str, dict[str, int]]:
-    cached: dict[str, dict[str, int]] = {}
-    if cache_path.is_file():
-        cached = json.loads(cache_path.read_text(encoding="utf-8"))["files"]
-    missing = [path for path in paths if path not in cached]
-
-    def inspect(path: str) -> tuple[str, dict[str, int]]:
-        metadata = sf.info(path)
-        return path, {
-            "frames": int(metadata.frames),
-            "samplerate": int(metadata.samplerate),
-            "channels": int(metadata.channels),
-        }
-
-    if missing:
-        with ThreadPoolExecutor(max_workers=workers) as executor:
-            for path, metadata in tqdm(
-                executor.map(inspect, missing),
-                total=len(missing),
-                desc="index audio metadata",
-            ):
-                cached[path] = metadata
-        cache_path.parent.mkdir(parents=True, exist_ok=True)
-        cache_path.write_text(
-            json.dumps(
-                {
-                    "description": "WAV header cache for SETTA EARS-WHAM v1 generation",
-                    "files": cached,
-                },
-                indent=2,
-            )
-            + "\n",
-            encoding="utf-8",
-        )
-    return cached
-
-
-def generate_selected(
-    rows: list[dict],
-    clean_dir: Path,
-    noisy_dir: Path,
-    sample_rate: int,
+def validate_audio_inputs(
+    rows: list[dict[str, Any]],
+    speech_paths: dict[tuple[str, str], Path],
+    noise_paths: dict[str, Path],
     workers: int,
-) -> tuple[list[dict], list[str]]:
-    grouped: dict[tuple[str, str, str], list[dict]] = defaultdict(list)
-    for row in rows:
-        grouped[(row["split"], row["speaker"], row["speech_path"])].append(row)
+) -> None:
+    speech_items = list(speech_paths.items())
+    noise_items = list(noise_paths.items())
 
-    def mix_group(item) -> tuple[list[dict], list[str]]:
-        (_, _, speech_path), group = item
-        meter = pyln.Meter(sample_rate)
-        first = group[0]
-        speech, speech_rate = sf.read(speech_path)
-        noise, noise_rate = sf.read(
-            first["noise_path"],
+    def inspect(item: tuple[Any, Path]) -> tuple[Any, AudioInfo]:
+        key, path = item
+        return key, audio_info(path)
+
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        speech_info = dict(
+            tqdm(
+                executor.map(inspect, speech_items),
+                total=len(speech_items),
+                desc="validate EARS",
+            )
+        )
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        noise_info = dict(
+            tqdm(
+                executor.map(inspect, noise_items),
+                total=len(noise_items),
+                desc="validate WHAM",
+            )
+        )
+
+    for key, info in speech_info.items():
+        if info.sample_rate != PAPER_SAMPLE_RATE:
+            raise ValueError(
+                f"EARS file {speech_paths[key]} is {info.sample_rate} Hz; "
+                f"expected {PAPER_SAMPLE_RATE} Hz"
+            )
+        if info.channels != 1:
+            raise ValueError(
+                f"EARS file {speech_paths[key]} has {info.channels} channels; expected mono"
+            )
+    for key, info in noise_info.items():
+        if info.sample_rate != PAPER_SAMPLE_RATE:
+            raise ValueError(
+                f"WHAM file {noise_paths[key]} is {info.sample_rate} Hz; "
+                f"expected {PAPER_SAMPLE_RATE} Hz"
+            )
+
+    group_fields: dict[tuple[str, str], tuple[Any, ...]] = {}
+    for index, row in enumerate(rows):
+        speech_key = (str(row["speaker"]), str(row["speech_file"]))
+        noise_key = str(row["noise_file"])
+        speech = speech_info[speech_key]
+        noise = noise_info[noise_key]
+        start = int(row["speech_start"])
+        end = int(row["speech_end"])
+        duration = int(row["duration_frames"])
+        channel = int(row["noise_channel"])
+        base_start = int(row["noise_base_start"])
+        noise_start = int(row["noise_start"])
+        noise_end = int(row["noise_end"])
+
+        if start < 0 or end < -1 or (end >= 0 and end > speech.frames):
+            raise ValueError(f"manifest row {index} has invalid speech bounds")
+        expected_duration = expected_segment_frames(speech.frames, start, end)
+        if duration <= 0 or duration != expected_duration:
+            raise ValueError(
+                f"manifest row {index} duration mismatch: {duration} != {expected_duration}"
+            )
+        if channel < 0 or channel >= noise.channels:
+            raise ValueError(f"manifest row {index} has invalid WHAM channel {channel}")
+        if base_start < 0 or base_start + speech.frames > noise.frames:
+            raise ValueError(f"manifest row {index} has invalid WHAM base offset")
+        if noise_start != base_start + start or noise_end != noise_start + duration:
+            raise ValueError(
+                f"manifest row {index} has inconsistent WHAM segment bounds"
+            )
+
+        group_value = (
+            noise_key,
+            channel,
+            base_start,
+            float(row["final_snr_db"]),
+            float(row["noise_gain"]),
+        )
+        previous = group_fields.setdefault(speech_key, group_value)
+        if group_value != previous:
+            raise ValueError(
+                f"manifest rows for {speech_key} disagree on mixture construction"
+            )
+
+    grouped: dict[tuple[str, str], dict[str, Any]] = {}
+    for row in rows:
+        grouped.setdefault((str(row["speaker"]), str(row["speech_file"])), row)
+
+    def validate_mixture(item: tuple[tuple[str, str], dict[str, Any]]) -> None:
+        speech_key, row = item
+        speech, _ = sf.read(speech_paths[speech_key])
+        noise, _ = sf.read(
+            noise_paths[str(row["noise_file"])],
             always_2d=True,
-            start=first["noise_base_start"],
+            start=int(row["noise_base_start"]),
             frames=len(speech),
         )
-        if speech_rate != sample_rate or noise_rate != sample_rate:
-            raise ValueError(f"sample-rate mismatch for {speech_path}")
-        noise = noise[:, first["noise_channel"]]
-
-        snr_db = first["snr_db"]
+        noise = noise[:, int(row["noise_channel"])]
+        meter = pyln.Meter(PAPER_SAMPLE_RATE)
         speech_loudness = meter.integrated_loudness(speech)
         noise_loudness = meter.integrated_loudness(noise)
-        target_loudness = speech_loudness - snr_db
-        gain = 10.0 ** ((target_loudness - noise_loudness) / 20.0)
+        final_snr = float(row["snr_db"])
+        gain = 10.0 ** ((speech_loudness - final_snr - noise_loudness) / 20.0)
         mixture = speech + gain * noise
         while np.max(np.abs(mixture)) >= 1.0:
-            snr_db += 1.0
-            target_loudness = speech_loudness - snr_db
-            gain = 10.0 ** ((target_loudness - noise_loudness) / 20.0)
+            final_snr += 1.0
+            gain = 10.0 ** ((speech_loudness - final_snr - noise_loudness) / 20.0)
             mixture = speech + gain * noise
+        if final_snr != float(row["final_snr_db"]) or not math.isclose(
+            gain, float(row["noise_gain"]), rel_tol=1e-12, abs_tol=0.0
+        ):
+            raise ValueError(
+                f"raw audio content is incompatible with the fixed manifest for "
+                f"{speech_key}: reconstructed final_snr/noise_gain "
+                f"{final_snr}/{gain} != "
+                f"{row['final_snr_db']}/{row['noise_gain']}"
+            )
 
-        group_manifest: list[dict] = []
-        group_metadata: list[str] = []
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        for _ in tqdm(
+            executor.map(validate_mixture, grouped.items()),
+            total=len(grouped),
+            desc="validate mixture metadata",
+        ):
+            pass
+
+
+def generate_dataset(
+    rows: list[dict[str, Any]],
+    speech_paths: dict[tuple[str, str], Path],
+    noise_paths: dict[str, Path],
+    out_dir: Path,
+    workers: int,
+) -> None:
+    grouped: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
+    for row in rows:
+        grouped[(str(row["speaker"]), str(row["speech_file"]))].append(row)
+
+    clean_dir = out_dir / "clean"
+    noisy_dir = out_dir / "noisy"
+    source_dir = out_dir / "source"
+    for directory in (clean_dir, noisy_dir, source_dir):
+        directory.mkdir(parents=True, exist_ok=False)
+
+    def mix_group(item: tuple[tuple[str, str], list[dict[str, Any]]]) -> int:
+        speech_key, group = item
+        first = group[0]
+        speech, speech_rate = sf.read(speech_paths[speech_key])
+        noise, noise_rate = sf.read(
+            noise_paths[str(first["noise_file"])],
+            always_2d=True,
+            start=int(first["noise_base_start"]),
+            frames=len(speech),
+        )
+        if speech_rate != PAPER_SAMPLE_RATE or noise_rate != PAPER_SAMPLE_RATE:
+            raise ValueError(f"sample-rate changed after validation for {speech_key}")
+        if len(noise) != len(speech):
+            raise ValueError(f"short WHAM read for {speech_key}")
+
+        noise_channel = noise[:, int(first["noise_channel"])]
+        mixture = speech + float(first["noise_gain"]) * noise_channel
         for row in group:
-            start, end = row["speech_start"], row["speech_end"]
-            clean_segment = speech[start:end]
-            noisy_segment = mixture[start:end]
-            identifier = row["sample_id"]
-            sf.write(clean_dir / identifier, clean_segment, sample_rate, subtype="FLOAT")
-            sf.write(noisy_dir / identifier, noisy_segment, sample_rate, subtype="FLOAT")
-            group_metadata.append(
-                f'{Path(identifier).stem} {row["noise_file"]} {snr_db:.6f}'
+            start = int(row["speech_start"])
+            end = int(row["speech_end"])
+            clean_segment = paper_compatible_slice(speech, start, end)
+            noisy_segment = paper_compatible_slice(mixture, start, end)
+            expected = int(row["duration_frames"])
+            if len(clean_segment) != expected or len(noisy_segment) != expected:
+                raise RuntimeError(
+                    f"generated length mismatch for {row['sample_id']}: "
+                    f"{len(clean_segment)}/{len(noisy_segment)} != {expected}"
+                )
+            identifier = str(row["sample_id"])
+            sf.write(
+                clean_dir / identifier,
+                clean_segment,
+                PAPER_SAMPLE_RATE,
+                subtype="FLOAT",
             )
-            group_manifest.append(
-                {
-                    "sample_id": identifier,
-                    "training_role": "train" if row["split"] == "train" else "validation",
-                    "speech_style": speech_style(row["speech_file"]),
-                    "snr_bin": snr_bin(snr_db),
-                    "final_snr_db": snr_db,
-                    "noise_gain": gain,
-                    **{
-                        key: value
-                        for key, value in row.items()
-                        if key not in {"speech_path", "noise_path", "sample_id"}
-                    },
-                }
+            sf.write(
+                noisy_dir / identifier,
+                noisy_segment,
+                PAPER_SAMPLE_RATE,
+                subtype="FLOAT",
             )
-        return group_manifest, group_metadata
+        return len(group)
 
-    manifest_rows: list[dict] = []
-    metadata_lines: list[str] = []
+    generated = 0
     items = list(grouped.items())
     with ThreadPoolExecutor(max_workers=workers) as executor:
-        for group_manifest, group_metadata in tqdm(
+        for count in tqdm(
             executor.map(mix_group, items),
             total=len(items),
-            desc="mix selected source",
+            desc="reconstruct paper data",
         ):
-            manifest_rows.extend(group_manifest)
-            metadata_lines.extend(group_metadata)
-    return manifest_rows, metadata_lines
+            generated += count
+    if generated != len(rows):
+        raise RuntimeError(f"generated {generated} files, expected {len(rows)}")
 
 
-def summarize(rows: list[dict], sample_rate: int) -> dict:
-    return {
-        "pairs": len(rows),
-        "hours": sum(row["duration_frames"] for row in rows) / sample_rate / 3600.0,
-        "speakers": len({row["speaker"] for row in rows}),
-        "noise_recordings": len({row["noise_file"] for row in rows}),
-        "speech_styles": dict(
-            sorted(Counter(speech_style(row["speech_file"]) for row in rows).items())
-        ),
-        "snr_bins": dict(
-            sorted(
-                Counter(
-                    snr_bin(float(row.get("final_snr_db", row["snr_db"]))) for row in rows
-                ).items()
-            )
-        ),
-        "snr_min": min(float(row.get("final_snr_db", row["snr_db"])) for row in rows),
-        "snr_max": max(float(row.get("final_snr_db", row["snr_db"])) for row in rows),
-    }
+def write_metadata(
+    rows: list[dict[str, Any]], manifest_path: Path, out_dir: Path
+) -> None:
+    metadata = [
+        f"{Path(str(row['sample_id'])).stem} {row['noise_file']} "
+        f"{float(row['final_snr_db']):.6f}"
+        for row in rows
+    ]
+    validation_speakers = sorted(
+        {str(row["speaker"]) for row in rows if row["training_role"] == "validation"}
+    )
+    (out_dir / "metadata.txt").write_text("\n".join(metadata) + "\n", encoding="utf-8")
+    (out_dir / "validation_speakers.txt").write_text(
+        "\n".join(validation_speakers) + "\n", encoding="utf-8"
+    )
+    shutil.copyfile(manifest_path, out_dir / "subset_manifest.json")
 
 
 def main() -> None:
     args = parse_args()
-    np.random.seed(args.generation_seed)
-    all_speakers = sorted(path.name for path in args.ears_dir.iterdir() if path.is_dir())
-    validation_speakers = ["p100", "p101"]
-    test_speakers = ["p102", "p103", "p104", "p105", "p106", "p107"]
-    train_speakers = [
-        speaker
-        for speaker in all_speakers
-        if speaker not in validation_speakers + test_speakers
-    ]
-    if len(train_speakers) != 99:
-        raise RuntimeError(f"expected 99 v1 train speakers, got {len(train_speakers)}")
+    if args.workers < 1:
+        raise ValueError("--workers must be at least 1")
+    if args.out_dir.exists():
+        raise FileExistsError(f"output directory already exists: {args.out_dir}")
 
-    # Keep glob order exactly as the upstream v1 generator.
-    noise_files = glob(str(args.wham_dir / "*.wav"))
-    ears_files = sorted(glob(str(args.ears_dir / "*" / "*.wav")))
-    audio_info = load_audio_info(
-        noise_files + ears_files, args.metadata_cache, args.metadata_workers
-    )
-    min_length = int(args.min_length * args.sample_rate)
-    cut_length = int(args.cut_length * args.sample_rate)
-    train_pool = simulate_split(
-        "train",
-        train_speakers,
-        args.ears_dir,
-        noise_files,
-        audio_info,
-        args.sample_rate,
-        args.min_snr,
-        args.max_snr,
-        min_length,
-        cut_length,
-    )
-    validation_rows = simulate_split(
-        "valid",
-        validation_speakers,
-        args.ears_dir,
-        noise_files,
-        audio_info,
-        args.sample_rate,
-        args.min_snr,
-        args.max_snr,
-        min_length,
-        cut_length,
-    )
-    fixed_rows = load_fixed_selection(args.selection_manifest)
-    selected_train = select_fixed_rows(train_pool, fixed_rows, "train")
-    validation_rows = select_fixed_rows(validation_rows, fixed_rows, "validation")
-    if len(selected_train) != args.train_size:
-        raise RuntimeError(
-            f"fixed selection has {len(selected_train)} training rows, "
-            f"not requested {args.train_size}"
-        )
+    _, rows = load_manifest(args.selection_manifest)
+    validate_manifest(rows)
+    speech_paths, noise_paths = resolve_inputs(rows, args.ears_dir, args.wham_dir)
+    validate_audio_inputs(rows, speech_paths, noise_paths, args.workers)
 
-    clean_dir = args.out_dir / "clean"
-    noisy_dir = args.out_dir / "noisy"
-    source_dir = args.out_dir / "source"
-    for directory in (clean_dir, noisy_dir, source_dir):
-        directory.mkdir(parents=True, exist_ok=False)
+    args.out_dir.mkdir(parents=True)
+    try:
+        generate_dataset(rows, speech_paths, noise_paths, args.out_dir, args.workers)
+        write_metadata(rows, args.selection_manifest, args.out_dir)
+    except Exception:
+        shutil.rmtree(args.out_dir)
+        raise
 
-    generated_rows, metadata_lines = generate_selected(
-        selected_train + validation_rows,
-        clean_dir,
-        noisy_dir,
-        args.sample_rate,
-        args.mix_workers,
-    )
-    source_speakers = sorted({row["speaker"] for row in selected_train})
-    speaker_overlap = sorted(set(source_speakers) & set(validation_speakers))
-    if speaker_overlap:
-        raise RuntimeError(f"speaker leakage: {speaker_overlap}")
-
-    generated_train = [row for row in generated_rows if row["training_role"] == "train"]
-    generated_validation = [
-        row for row in generated_rows if row["training_role"] == "validation"
-    ]
-    audit = {
-        "description": "SETTA-aligned EARS-WHAM v1 source-only adapter subset",
-        "ears_benchmark_repository": "https://github.com/sp-uhh/ears_benchmark",
-        "sparse_io_equivalence": {
-            "reference_pairs": VERIFIED_REFERENCE_PAIRS,
-            "clean_max_abs_error": 0.0,
-            "noisy_max_abs_error": 0.0,
-            "csv_prefix_exact": True,
-        },
-        "generation_seed": args.generation_seed,
-        "selection_manifest": str(args.selection_manifest.resolve()),
-        "selection_strategy": "exact identities from the repository's fixed selection metadata",
-        "sample_rate": args.sample_rate,
-        "train_pool": summarize(train_pool, args.sample_rate),
-        "selected_train": summarize(generated_train, args.sample_rate),
-        "validation": summarize(generated_validation, args.sample_rate),
-        "source_speakers": source_speakers,
-        "validation_speakers": validation_speakers,
-        "speaker_overlap": speaker_overlap,
-        "checkpoint_policy": "frozen original checkpoints/cmgan_ears.th only",
-        "target_domain_data_used": False,
-        "rows": generated_rows,
-    }
-    (args.out_dir / "metadata.txt").write_text(
-        "\n".join(metadata_lines) + "\n", encoding="utf-8"
-    )
-    (args.out_dir / "validation_speakers.txt").write_text(
-        "\n".join(validation_speakers) + "\n", encoding="utf-8"
-    )
-    (args.out_dir / "subset_manifest.json").write_text(
-        json.dumps(audit, indent=2) + "\n", encoding="utf-8"
-    )
+    role_counts = Counter(str(row["training_role"]) for row in rows)
     print(
         json.dumps(
-            {key: audit[key] for key in ("train_pool", "selected_train", "validation")},
+            {
+                "output": str(args.out_dir.resolve()),
+                "sample_rate": PAPER_SAMPLE_RATE,
+                "train": role_counts["train"],
+                "held_out": role_counts["validation"],
+                "source_outputs_generated": False,
+            },
             indent=2,
         )
     )

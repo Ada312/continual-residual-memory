@@ -43,13 +43,16 @@ The pretrained CMGAN checkpoint released by [SETTA](https://github.com/tobiaaa/S
 
 CRM is trained on EARS-WHAM and evaluated on DNS 2020 synthetic no-reverb, EARS-D, and Libri-MUSAN. Raw datasets are not redistributed.
 
-Before training, prepare EARS-WHAM and generate the frozen CMGAN outputs:
+Before training, reconstruct the fixed paper EARS-WHAM split from the public
+EARS release, WHAM 48 kHz noise, and the committed selection manifest, then
+generate the frozen CMGAN outputs:
 
 ```bash
 export DATA_ROOT=/path/to/crm-data
 
-python data/prepare_ears_wham_from_benchmark.py \
-  --ears-wham-root /path/to/EARS-WHAM \
+python data/prepare_ears_wham_from_raw.py \
+  --ears-dir /path/to/EARS \
+  --wham-dir /path/to/high_res_wham/audio \
   --out-dir "$DATA_ROOT/ears_wham"
 
 python src/backbones/cmgan/inference.py \
@@ -57,6 +60,11 @@ python src/backbones/cmgan/inference.py \
   --output-dir "$DATA_ROOT/ears_wham/source" \
   --checkpoint checkpoints/external/cmgan_ears.th
 ```
+
+This produces the paper's fixed 8,192-example training split and 632-example
+speaker-disjoint held-out split. For sample-level compatibility with the data
+used in the paper, final EARS segments retain the historical one-sample
+end-slicing behavior recorded by the manifest.
 
 See [`data/README.md`](data/README.md) for complete preparation instructions for EARS-WHAM, DNS, EARS-D, and Libri-MUSAN, as well as dataset sources and directory layouts.
 

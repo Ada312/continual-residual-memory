@@ -39,19 +39,55 @@ evaluation, never for CRM inference or memory updates.
 
 ## EARS-WHAM
 
-Prepare the fixed 8,192-example training split and 632-example speaker-disjoint
-held-out split from an official EARS-WHAM v1 build:
+Download the public 48 kHz EARS speech and WHAM noise releases. Arrange the raw
+audio as follows (the WHAM command should point directly to its `audio/`
+directory):
+
+```text
+/path/to/EARS/
+├── p001/
+│   └── *.wav
+├── ...
+└── p101/
+    └── *.wav
+
+/path/to/high_res_wham/audio/
+└── *.wav
+```
+
+Reconstruct the exact fixed 8,192-example training split and 632-example
+speaker-disjoint held-out split used in the paper:
 
 ```bash
-python data/prepare_ears_wham_from_benchmark.py \
-  --ears-wham-root /path/to/EARS-WHAM \
+export DATA_ROOT=/path/to/crm-data
+
+python data/prepare_ears_wham_from_raw.py \
+  --ears-dir /path/to/EARS \
+  --wham-dir /path/to/high_res_wham/audio \
   --out-dir "$DATA_ROOT/ears_wham"
 ```
 
 The selected identities are fixed in
-`data/manifests/training/subset_manifest.json`. The preparation script consumes
-that metadata directly. `data/prepare_ears_wham_from_raw.py` provides an
-alternative reconstruction path from raw EARS and WHAM data.
+`data/manifests/training/subset_manifest.json`. The script reads every speech
+identity, noise identity, channel, offset, SNR, duration, and train/held-out
+assignment directly from that manifest; it does not replay random dataset
+generation or depend on filesystem enumeration order. It validates all
+referenced files, 48 kHz sample rates, channels, and segment bounds before
+writing output.
+
+The paper dataset was created with Python's `[start:-1]` slicing for final EARS
+segments whose recorded `speech_end` is `-1`. This omits the last waveform
+sample. The reconstruction preserves that historical behavior deliberately for
+sample-level compatibility with the data used in the paper.
+
+If you already have a compatible EARS-WHAM v1 benchmark build containing its
+original `train.csv` and `valid.csv`, the benchmark adapter remains available:
+
+```bash
+python data/prepare_ears_wham_from_benchmark.py \
+  --ears-wham-root /path/to/EARS-WHAM-v1 \
+  --out-dir "$DATA_ROOT/ears_wham"
+```
 
 ## DNS
 
