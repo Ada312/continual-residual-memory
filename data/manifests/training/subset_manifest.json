@@ -1,12 +1,6 @@
 {
-  "description": "SETTA-aligned EARS-WHAM v1 source-only adapter subset",
+  "description": "Fixed EARS-WHAM training and held-out selection used by CRM",
   "ears_benchmark_repository": "https://github.com/sp-uhh/ears_benchmark",
-  "sparse_io_equivalence": {
-    "reference_pairs": 284,
-    "clean_max_abs_error": 0.0,
-    "noisy_max_abs_error": 0.0,
-    "csv_prefix_exact": true
-  },
   "generation_seed": 42,
   "selection_seed": 1337,
   "selection_strategy": "proportional speaker x speech_style x 5dB_SNR_bin strata; within-stratum greedy WHAM recording diversity",
@@ -180,7 +174,6 @@
     "p101"
   ],
   "speaker_overlap": [],
-  "checkpoint_policy": "frozen original checkpoints/cmgan_ears.th only",
   "target_domain_data_used": false,
   "rows": [
     {

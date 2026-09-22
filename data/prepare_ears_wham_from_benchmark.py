@@ -205,8 +205,8 @@ def main() -> None:
     if overlap:
         raise RuntimeError(f"speaker leakage between train and validation: {overlap}")
 
-    audit = {
-        "description": "SETTA-aligned EARS-WHAM v1 source-only adapter subset",
+    manifest = {
+        "description": "Fixed EARS-WHAM training and held-out selection used by CRM",
         "ears_benchmark_repository": "https://github.com/sp-uhh/ears_benchmark",
         "ears_wham_root": str(args.ears_wham_root.resolve()),
         "selection_manifest": str(args.selection_manifest.resolve()),
@@ -218,7 +218,6 @@ def main() -> None:
         "source_speakers": source_speakers,
         "validation_speakers": validation_speakers,
         "speaker_overlap": overlap,
-        "checkpoint_policy": "frozen original checkpoints/cmgan_ears.th only",
         "target_domain_data_used": False,
         "rows": output_rows,
     }
@@ -226,14 +225,17 @@ def main() -> None:
         "\n".join(metadata_lines) + "\n", encoding="utf-8"
     )
     (args.out_dir / "subset_manifest.json").write_text(
-        json.dumps(audit, indent=2) + "\n", encoding="utf-8"
+        json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
     )
     (args.out_dir / "validation_speakers.txt").write_text(
         "\n".join(validation_speakers) + "\n", encoding="utf-8"
     )
     print(
         json.dumps(
-            {key: audit[key] for key in ("selected_train", "validation", "speaker_overlap")},
+            {
+                key: manifest[key]
+                for key in ("selected_train", "validation", "speaker_overlap")
+            },
             indent=2,
         )
     )

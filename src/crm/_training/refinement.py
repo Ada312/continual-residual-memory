@@ -40,7 +40,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--recovery-checkpoint", type=Path, required=True)
     parser.add_argument("--out-dir", type=Path, required=True)
     parser.add_argument("--context-cache", type=Path, default=None)
-    parser.add_argument("--validation-speakers", nargs="+", default=["p226"])
+    parser.add_argument("--validation-speakers", nargs="+", default=["p100", "p101"])
     parser.add_argument("--epochs", type=int, default=3)
     parser.add_argument("--batch-size", type=int, default=8)
     parser.add_argument("--num-workers", type=int, default=4)

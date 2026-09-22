@@ -168,20 +168,20 @@ def test_manifest_rejects_duplicates_and_gaps(tmp_path):
 
 def test_paired_bootstrap_small_input(tmp_path):
     columns = ["Filename", "PESQ", "STOI", "C_sig", "C_bak", "C_ovl", "SSNR", "SISDR"]
-    static = pd.DataFrame([["a.wav", *([1.0] * 7)], ["b.wav", *([2.0] * 7)]], columns=columns)
-    dynamic = static.copy()
-    dynamic.loc[dynamic.Filename == "a.wav", columns[1:]] += 0.1
-    dynamic.loc[dynamic.Filename == "b.wav", columns[1:]] += 0.3
-    static.to_csv(tmp_path / "static.csv", index=False)
-    dynamic.to_csv(tmp_path / "dynamic.csv", index=False)
+    recovery = pd.DataFrame([["a.wav", *([1.0] * 7)], ["b.wav", *([2.0] * 7)]], columns=columns)
+    crm = recovery.copy()
+    crm.loc[crm.Filename == "a.wav", columns[1:]] += 0.1
+    crm.loc[crm.Filename == "b.wav", columns[1:]] += 0.3
+    recovery.to_csv(tmp_path / "recovery.csv", index=False)
+    crm.to_csv(tmp_path / "crm.csv", index=False)
     subprocess.run(
         [sys.executable, str(ROOT / "scripts/paired_bootstrap_crm.py"),
-         "--static", str(tmp_path / "static.csv"), "--dynamic", str(tmp_path / "dynamic.csv"),
+         "--recovery", str(tmp_path / "recovery.csv"), "--crm", str(tmp_path / "crm.csv"),
          "--output", str(tmp_path / "bootstrap"), "--iterations", "200", "--seed", "20260830"],
         check=True, capture_output=True, text=True,
     )
     result = pd.read_csv(tmp_path / "bootstrap/paired_bootstrap_ci.csv")
     assert len(result) == 7
     assert result.utterances.eq(2).all()
-    assert result.dynamic_minus_static_mean.between(0.199999, 0.200001).all()
+    assert result.crm_minus_recovery_mean.between(0.199999, 0.200001).all()
     assert result.wins.eq(2).all()

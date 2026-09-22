@@ -27,8 +27,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--noisy-dir", type=Path, required=True)
     parser.add_argument("--source-dir", type=Path, required=True)
     parser.add_argument("--out-dir", type=Path, required=True)
-    parser.add_argument("--validation-speakers", nargs="+", default=["p226", "p287"])
-    parser.add_argument("--epochs", type=int, default=20)
+    parser.add_argument("--validation-speakers", nargs="+", default=["p100", "p101"])
+    parser.add_argument("--epochs", type=int, default=4)
     parser.add_argument(
         "--validation-interval",
         type=int,

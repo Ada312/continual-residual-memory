@@ -142,7 +142,7 @@ If you find this work useful, please cite:
 ```bibtex
 @misc{shan2026continual,
   title  = {Continual Residual Memory for Gradient-Free Test-Time Adaptation in Speech Enhancement},
-  author = {Shan, Yijia and Wang, Tianrui and Wang, Zixiang and Wang, Yu and Chen, Xie},
+  author = {Shan, Yijia and Wang, Tianrui and Wang, Zixiang and Wang, Sheng and Li, Yao and Wang, Yu and Chen, Xie},
   year   = {2026}
 }
 ```

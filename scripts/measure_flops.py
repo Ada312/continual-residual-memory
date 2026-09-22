@@ -185,7 +185,6 @@ def main() -> None:
     source_flops = sum(int(row["source_counted_flops"]) for row in rows)
     dynamic_flops = sum(int(row["dynamic_counted_flops"]) for row in rows)
     report = {
-        "status": "VERIFIED AGAINST FROZEN RTF PROTOCOL",
         "measurement_class": "PROFILER-COUNTED FLOPs",
         "profiler": "torch.utils.flop_counter.FlopCounterMode",
         "flop_convention": "one multiply-add is two FLOPs",

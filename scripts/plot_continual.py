@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Plot smoothed per-utterance DNS CRM-minus-Static PESQ/COVL gains."""
+"""Plot DNS full-CRM gains over utterance-local recovery."""
 
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ import numpy as np
 EXPECTED_N = 150
 
 
-def load_inputs(manifest_path: Path, static_path: Path, dynamic_path: Path):
+def load_inputs(manifest_path: Path, recovery_path: Path, crm_path: Path):
     with manifest_path.open(newline="") as handle:
         manifest = sorted(csv.DictReader(handle), key=lambda row: int(row["test_order"]))
     if len(manifest) != EXPECTED_N:
@@ -28,7 +28,7 @@ def load_inputs(manifest_path: Path, static_path: Path, dynamic_path: Path):
         raise RuntimeError("DNS test_order must be contiguous and zero-based")
 
     methods = {}
-    for method, path in (("static", static_path), ("dynamic", dynamic_path)):
+    for method, path in (("recovery", recovery_path), ("crm", crm_path)):
         with path.open(newline="") as handle:
             rows = list(csv.DictReader(handle))
         ids = [row["Filename"] for row in rows]
@@ -45,9 +45,9 @@ def causal_moving_average(values: np.ndarray, window: int) -> np.ndarray:
 
 
 def draw(methods, metric_column: str, metric_label: str, window: int, output: Path):
-    static = np.asarray([float(row[metric_column]) for row in methods["static"]])
-    dynamic = np.asarray([float(row[metric_column]) for row in methods["dynamic"]])
-    gain = dynamic - static
+    recovery = np.asarray([float(row[metric_column]) for row in methods["recovery"]])
+    crm = np.asarray([float(row[metric_column]) for row in methods["crm"]])
+    gain = crm - recovery
     smoothed = causal_moving_average(gain, window)
     x = np.arange(1, EXPECTED_N + 1)
 
@@ -84,8 +84,18 @@ def main() -> None:
     here = Path(__file__).resolve().parent
     parser = argparse.ArgumentParser()
     parser.add_argument("--manifest", type=Path, default=here.parent / "data/manifests/dns.csv")
-    parser.add_argument("--static", type=Path, default=here.parent / "results/main/per_utterance/dns_static.csv")
-    parser.add_argument("--dynamic", type=Path, default=here.parent / "results/main/per_utterance/dns_dynamic.csv")
+    parser.add_argument(
+        "--recovery",
+        type=Path,
+        required=True,
+        help="Per-utterance metrics for utterance-local recovery.",
+    )
+    parser.add_argument(
+        "--crm",
+        type=Path,
+        required=True,
+        help="Per-utterance metrics for full CRM.",
+    )
     parser.add_argument("--output-dir", type=Path, default=here.parent / "outputs/figures")
     parser.add_argument("--window", type=int, default=10)
     args = parser.parse_args()
@@ -93,19 +103,19 @@ def main() -> None:
         raise ValueError("--window must be >= 1")
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
-    _, methods = load_inputs(args.manifest, args.static, args.dynamic)
+    _, methods = load_inputs(args.manifest, args.recovery, args.crm)
     pesq = draw(methods, "PESQ", "PESQ", args.window, args.output_dir / "pesq.png")
     covl = draw(methods, "C_ovl", "COVL", args.window, args.output_dir / "covl.png")
     metadata = {
-        "definition": "per-utterance Dynamic/CRM minus Static",
+        "definition": "per-utterance full CRM minus utterance-local recovery",
         "utterances": EXPECTED_N,
         "order": "manifest test_order, converted from 0-based to x=1..150",
         "smoothing": f"causal trailing moving average, window={args.window}, no future samples",
         "raw_points_visible": False,
         "inputs": {
             "manifest": str(args.manifest),
-            "static": str(args.static),
-            "dynamic": str(args.dynamic),
+            "recovery": str(args.recovery),
+            "crm": str(args.crm),
         },
         "raw_gain_summary": {
             "pesq_min": float(pesq.min()), "pesq_max": float(pesq.max()),
