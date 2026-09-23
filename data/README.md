@@ -94,45 +94,21 @@ python data/prepare_ears_wham_from_benchmark.py \
 Download the official DNS 2020 synthetic test set from the
 [DNS Challenge `interspeech2020/master` branch](https://github.com/microsoft/DNS-Challenge/tree/interspeech2020/master)
 and use its `datasets/test_set/synthetic/no_reverb/{clean,noisy}` directories. The
-official files are named `clean_fileid_<N>.wav` and `noisy_fileid_<N>.wav`;
-CRM uses the shared name `dns2020_no_reverb_fileid_<N>.wav` for each pair.
+official clean files are named `clean_fileid_<N>.wav`. Noisy files include a
+descriptive prefix and end in `_fileid_<N>.wav`. CRM uses the shared name
+`dns2020_no_reverb_fileid_<N>.wav` for each pair.
 
-The following command creates deterministic symbolic links for exactly the 150
-manifest entries without copying the audio:
+The preparation script matches clean and noisy files deterministically by their
+file ID and creates symbolic links for exactly the 150 manifest entries without
+copying the audio. Every required ID must have exactly one clean match and one
+noisy match.
 
 ```bash
 export DNS_RAW=/path/to/DNS-Challenge/datasets/test_set/synthetic/no_reverb
 
-python - <<'PY'
-import csv
-import os
-from pathlib import Path
-
-manifest = Path("data/manifests/dns.csv")
-output = Path(os.environ["DATA_ROOT"]) / "dns"
-raw = Path(os.environ["DNS_RAW"])
-rows = list(csv.DictReader(manifest.open(newline="", encoding="utf-8")))
-if len(rows) != 150:
-    raise RuntimeError(f"expected 150 DNS entries, found {len(rows)}")
-
-for kind in ("clean", "noisy"):
-    (output / kind).mkdir(parents=True, exist_ok=True)
-
-for row in rows:
-    filename = row["filename"]
-    prefix = "dns2020_no_reverb_fileid_"
-    if not filename.startswith(prefix) or not filename.endswith(".wav"):
-        raise RuntimeError(f"unexpected DNS manifest name: {filename}")
-    file_id = filename[len(prefix):-4]
-    for kind in ("clean", "noisy"):
-        source = raw / kind / f"{kind}_fileid_{file_id}.wav"
-        destination = output / kind / filename
-        if not source.is_file():
-            raise FileNotFoundError(source)
-        if destination.exists() or destination.is_symlink():
-            raise FileExistsError(destination)
-        destination.symlink_to(source.resolve())
-PY
+python data/prepare_dns.py \
+  --dns-root "$DNS_RAW" \
+  --output-root "$DATA_ROOT/dns"
 ```
 
 The resulting filenames and causal evaluation order match
