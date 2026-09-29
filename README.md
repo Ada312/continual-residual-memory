@@ -4,9 +4,7 @@
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
 [![Audio Demo](https://img.shields.io/badge/Audio-Demo-71867a.svg)](https://ada312.github.io/continual-residual-memory-demo/)
 
-*Gradient-free continual test-time adaptation for speech enhancement through residual recovery and causal memory.*
-
-**Paper:** The paper will be released publicly soon.
+*Gradient-free continual test-time adaptation for speech enhancement through residual recovery and causal memory. The paper will be released publicly soon.*
 
 ## Introduction
 
