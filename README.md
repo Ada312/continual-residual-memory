@@ -6,6 +6,8 @@
 
 *Gradient-free continual test-time adaptation for speech enhancement through residual recovery and causal memory.*
 
+**Paper:** The paper will be released publicly soon.
+
 ## Introduction
 
 Continual Residual Memory (CRM) is a gradient-free continual test-time adaptation framework for speech enhancement. It selectively recovers useful information from the residual discarded by a frozen enhancement backbone and refines the recovery using causal prototype memory from preceding utterances. During deployment, model parameters remain fixed while the memory state is updated online.
