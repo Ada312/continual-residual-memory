@@ -135,18 +135,6 @@ python metrics/evaluate.py \
 
 We thank the authors of [SETTA](https://github.com/tobiaaa/SETTA) for releasing the pretrained CMGAN checkpoint and compatibility implementation, and the authors of [CMGAN](https://github.com/ruizhecao96/CMGAN) for the speech-enhancement backbone.
 
-## Citation
-
-If you find this work useful, please cite:
-
-```bibtex
-@misc{shan2026continual,
-  title  = {Continual Residual Memory for Gradient-Free Test-Time Adaptation in Speech Enhancement},
-  author = {Shan, Yijia and Wang, Tianrui and Wang, Zixiang and Wang, Sheng and Li, Yao and Wang, Yu and Chen, Xie},
-  year   = {2026}
-}
-```
-
 ## License
 
 Project code is released under [GPL-3.0](LICENSE). Third-party components and protocol metadata remain subject to their respective terms; see [`THIRD_PARTY.md`](THIRD_PARTY.md).
