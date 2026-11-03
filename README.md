@@ -3,8 +3,11 @@
 [![Python 3.9](https://img.shields.io/badge/Python-3.9-3776AB.svg)](requirements.txt)
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
 [![Audio Demo](https://img.shields.io/badge/Audio-Demo-71867a.svg)](https://ada312.github.io/continual-residual-memory-demo/)
+[![arXiv](https://img.shields.io/badge/arXiv-2611.01023-b31b1b.svg)](https://arxiv.org/abs/2611.01023)
 
-*Gradient-free continual test-time adaptation for speech enhancement through residual recovery and causal memory. The paper will be released publicly soon.*
+*Gradient-free continual test-time adaptation for speech enhancement through residual recovery and causal memory.*
+
+**Paper:** [arXiv:2611.01023](https://arxiv.org/abs/2611.01023)
 
 ## Introduction
 
@@ -129,6 +132,22 @@ python metrics/evaluate.py \
   --method crm \
   --references data/manifests/dns.csv \
   --fs 16000
+```
+
+## Citation
+
+If you find this work useful, please consider citing our paper:
+
+```bibtex
+@misc{shan2026crm,
+  title={Continual Residual Memory for Gradient-Free Test-Time Adaptation in Speech Enhancement},
+  author={Yijia Shan and Tianrui Wang and Zixiang Wang and Sheng Wang and Yao Li and Yu Wang and Xie Chen},
+  year={2026},
+  eprint={2611.01023},
+  archivePrefix={arXiv},
+  primaryClass={eess.AS},
+  url={https://arxiv.org/abs/2611.01023}
+}
 ```
 
 ## Acknowledgements
